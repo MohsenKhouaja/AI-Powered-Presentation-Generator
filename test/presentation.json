@@ -1,0 +1,52 @@
+[
+  {
+    "id": 1,
+    "title": "PantryPal: Revolutionizing Food Management",
+    "content": "Welcome to **PantryPal**, an application designed to make managing your groceries and meals effortless and magical.\n\nOur core mission is to leverage **Artificial Intelligence** to transform everyday kitchen tasks:\n\n*   **Simplify inventory tracking**\n*   **Generate personalized meal ideas**\n*   **Provide proactive insights** to reduce food waste\n\nThis presentation will walk you through PantryPal's complete functionalities, highlighting the AI enhancements that power each feature."
+  },
+  {
+    "id": 2,
+    "title": "F1: AI-Powered Inventory Ingestion",
+    "content": "### Goal: Make adding groceries effortless and magical.\n\n### User Goal:\n\"*I just came back from the store. I want to add all my groceries to the app in less than a minute.*\"\n\n### AI Enhancement:\n\n*   Utilizes **Optical Character Recognition (OCR)** on grocery receipts.\n*   Employs **Image Recognition** for fresh produce (not detailed in pipeline, but mentioned in 1.1).\n\nThis functionality streamlines the initial step of populating your digital pantry."
+  },
+  {
+    "id": 3,
+    "title": "F1: User Interface for Inventory Ingestion",
+    "content": "### Easy Access Input:\n\n*   The user taps a large **\"+\" button** on the home screen.\n\n### Presented with three clear options for adding items:\n\n1.  **Scan Receipt:**\n    *   AI-powered \"wow\" feature.\n    *   Fastest way to add multiple items from a grocery trip.\n2.  **Scan Barcode:**\n    *   Quick single-item entry.\n    *   Ideal for individual items or small additions.\n3.  **Add Manually:**\n    *   Reliable fallback for any item not covered by other methods.\n\nThis intuitive interface ensures all users can easily add items."
+  },
+  {
+    "id": 4,
+    "title": "F1: Scan Receipt - The Full Pipeline",
+    "content": "### Flutter Frontend:\n\n*   **Camera Activation:** Opens the phone's camera for the user.\n*   **Photo Capture:** User takes a clear, well-lit photo of the grocery receipt.\n*   **Image Preparation:** The image is compressed for efficient data transfer.\n*   **Backend Transmission:** The prepared image is sent to the backend for AI processing.\n\n### Return to Frontend:\n\n*   Backend returns a structured list of identified items.\n*   UI displays a confirmation screen: \"*We found these 15 items. Please review.*\"\n*   User corrects any mistakes, then taps \"Confirm\" to add all items to their digital pantry."
+  },
+  {
+    "id": 5,
+    "title": "F1: Scan Receipt - Backend AI Processing",
+    "content": "### Behind the Scenes Intelligence:\n\n1.  **OCR Service:**\n    *   Processes the receipt image using an OCR model (e.g., Google Cloud Vision or a fine-tuned open-source model).\n    *   Extracts **all text** from the receipt.\n\n2.  **Text Parsing & Structuring:**\n    *   A custom AI script or **LLM** (e.g., GPT-4) parses the extracted text.\n    *   Identifies **items, quantities, and prices**.\n    *   Removes irrelevant data (e.g., store name, tax).\n\n3.  **Product Matching:**\n    *   Parsed items are matched against a comprehensive **food database**.\n    *   Standardizes product names, categories, and assigns default shelf-life estimates."
+  },
+  {
+    "id": 6,
+    "title": "F2: Dynamic Recipe & Meal Plan Generation",
+    "content": "### Goal: Provide personalized meal ideas based on available ingredients.\n\n### User Goal:\n\"*It's 6 PM. I'm tired and uninspired. Show me a simple, healthy recipe I can make right now with the ingredients I have, especially using the chicken that expires tomorrow.*\"\n\n### AI Enhancement:\n\n*   Uses a **fine-tuned Large Language Model (LLM)**.\n*   Generates **unique and personalized recipes**.\n*   Goes beyond simple database matching to create truly tailored suggestions.\n\nThis functionality turns your pantry into a personal chef."
+  },
+  {
+    "id": 7,
+    "title": "F2: Recipe Generation Pipeline",
+    "content": "### User Interface (UI):\n\n*   **Button:** \"Generate a Recipe\"\n*   **Optional Filters:** \"Quick (under 30 mins)\", \"Healthy\", \"Vegan\", or natural language input.\n\n### Backend (AI Processing):\n\n1.  **Prepare the Prompt:**\n    *   Constructs a detailed prompt for the LLM, including:\n        *   Available ingredients (with expiry info).\n        *   User preferences.\n        *   Output format requirements.\n2.  **LLM Generation:**\n    *   Prompt is sent to a powerful LLM (e.g., GPT-4 or Gemini).\n    *   The LLM generates a unique, easy-to-follow recipe.\n3.  **Structure the Output:**\n    *   Response is formatted as JSON (e.g., `recipeName`, `ingredientsList`, `instructions`, `cookTime`).\n\n### Return to Frontend:\n\n*   Display recipe in a clean layout.\n*   User can tap \"I made this!\", triggering automatic ingredient deduction from inventory."
+  },
+  {
+    "id": 8,
+    "title": "F3: The \"PantryPal\" AI Assistant (Chatbot)",
+    "content": "### Goal: Enable full conversational control of the app.\n\n### User Goal:\n\"*I don't want to tap through menus. I just want to ask questions and get answers.*\"\n\n### AI Enhancement:\n\n*   A **conversational chatbot** capable of understanding intent.\n*   Executes functions such as inventory checking, recipe generation, or adding to the shopping list.\n\n### Full Pipeline:\n\n*   **UI:** A chat icon is always visible, opening a familiar conversational interface.\n*   **Backend (Intent Recognition):** User query analyzed via intent recognition or LLM function-calling (e.g., \"*Do I have any eggs left?*\" → check_inventory).\n*   **Action & Response Generation:** Executes the identified action and provides a text response or rich embedded card (e.g., full recipe)."
+  },
+  {
+    "id": 9,
+    "title": "F4: Proactive & Actionable Expiration Alerts",
+    "content": "### Goal: Turn expiring food notifications into valuable, actionable insights.\n\n### User Goal:\n\"*Remind me before food expires and show me an easy way to use it.*\"\n\n### AI Enhancement:\n\n*   Generates **contextual alerts** that go beyond simple notifications.\n*   **Suggests recipes** to use expiring items.\n*   **Intelligent Bundling:** Combines multiple expiring items for joint recipe ideas (e.g., \"*Your chicken and bell peppers are expiring soon! Perfect for Chicken Fajitas.* \")\n\nThis functionality proactively helps users reduce food waste and save money."
+  },
+  {
+    "id": 10,
+    "title": "F4: Expiration Alerts Pipeline - The Solution Loop",
+    "content": "This pipeline transforms a basic alert into an intelligent loop from **problem (expiring food)** to **solution (ready-to-make recipe)** in one seamless user interaction.\n\n### 1. The Background Task (The Watcher):\n*   A scheduled task runs daily (e.g., 8 AM).\n*   Scans inventory for items expiring within 1-3 days.\n*   Produces a list of expiring items with user IDs.\n\n### 2. AI-Powered Suggestion Generation (The Brain):\n*   An LLM crafts a short push notification, a simple recipe title, and identifies the target item(s).\n*   Tone is friendly and helpful.\n\n### 3. Sending the Push Notification:\n*   Backend sends notification via Firebase or Apple Push Service.\n*   Includes hidden metadata with the suggested recipe title.\n\n### 4. The In-App Experience:\n*   User taps the notification → app opens.\n*   Metadata triggers Functionality 2 (Recipe Generation) using the suggested recipe.\n*   The full recipe appears instantly, ready for the user to cook!"
+  }
+]
