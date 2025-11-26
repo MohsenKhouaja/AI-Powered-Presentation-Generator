@@ -116,6 +116,18 @@ function App() {
         "This pipeline transforms a basic alert into an intelligent loop from **problem (expiring food)** to **solution (ready-to-make recipe)** in one seamless user interaction.\n\n### 1. The Background Task (The Watcher):\n*   A scheduled task runs daily (e.g., 8 AM).\n*   Scans inventory for items expiring within 1-3 days.\n*   Produces a list of expiring items with user IDs.\n\n### 2. AI-Powered Suggestion Generation (The Brain):\n*   An LLM crafts a short push notification, a simple recipe title, and identifies the target item(s).\n*   Tone is friendly and helpful.\n\n### 3. Sending the Push Notification:\n*   Backend sends notification via Firebase or Apple Push Service.\n*   Includes hidden metadata with the suggested recipe title.\n\n### 4. The In-App Experience:\n*   User taps the notification → app opens.\n*   Metadata triggers Functionality 2 (Recipe Generation) using the suggested recipe.\n*   The full recipe appears instantly, ready for the user to cook!",
     },
   ];
+  useEffect(() => {
+    fetch("http://localhost:3001/",{
+      method: "GET",
+    })
+      .then((res) => res.text())
+      .then((data) => {
+        console.log(data);
+      })
+      .catch((err) => {
+        console.error("Error fetching from backend:", err);
+      });
+  }, []);
   return (
     <>
       <Presentation slides={presentation}></Presentation>
