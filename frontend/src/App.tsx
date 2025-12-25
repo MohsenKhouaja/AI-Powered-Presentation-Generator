@@ -84,6 +84,12 @@ useEffect(() => {
 
 export default App;
  */
+
+
+
+
+//gemini
+
 import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm"; // REQUIRED: npm install remark-gfm
@@ -102,7 +108,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
-import { ScrollArea } from "@/components/ui/scroll-area";
+//import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   HoverCard,
@@ -112,7 +118,7 @@ import {
 import { Info } from "lucide-react";
 
 // --- The "Kitchen Sink" Markdown Text ---
-const SLIDE_CONTENT_MARKDOWN = `
+const SLIDE_CONTENT_MARKDOWN_1 = `
 # Q4 Project Overview
 ## System Architecture & Deliverables
 
@@ -158,32 +164,29 @@ Review full documentation at [Internal Wiki](https://wiki.internal.company).
 
 export default function PresentationSlide() {
   return (
-    <div className="flex items-center justify-center min-h-screen bg-slate-950 p-8">
-      {/* 1. We wrap everything in an AspectRatio Card to simulate a 16:9 Slide */}
-      <Card className="w-full max-w-5xl shadow-2xl overflow-hidden border-slate-800 bg-slate-900 text-slate-100">
-        <AspectRatio ratio={16 / 9}>
-          <ScrollArea className="h-full w-full p-12">
+    <div className="flex items-center justify-center overflow-hidden min-h-screen bg-background p-8">
+      <Card className="w-full shadow-2xl overflow-hidden border-border bg-card text-card-foreground p-12">          
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               components={{
                 // --- 1. HEADINGS (Typography & Slide Structure) ---
                 h1: ({ ...props }) => (
-                  <div className="mb-8 border-b border-slate-700 pb-4">
+                  <div className="mb-4 border-b border-border pb-4">
                     <h1
-                      className="text-4xl font-extrabold tracking-tight lg:text-5xl bg-gradient-to-r from-blue-400 to-emerald-400 text-transparent bg-clip-text"
+                      className="text-4xl font-extrabold tracking-tight lg:text-5xl text-primary"
                       {...props}
                     />
                   </div>
                 ),
                 h2: ({ ...props }) => (
                   <h2
-                    className="mt-10 mb-4 text-2xl font-semibold tracking-tight text-slate-200 border-l-4 border-blue-500 pl-4"
+                    className="mt-6 mb-2 text-2xl font-semibold tracking-tight text-foreground border-l-4 border-primary pl-4"
                     {...props}
                   />
                 ),
                 h3: ({ ...props }) => (
                   <h3
-                    className="mt-8 mb-2 text-xl font-semibold text-slate-300"
+                    className="mt-4 mb-2 text-xl font-semibold text-foreground"
                     {...props}
                   />
                 ),
@@ -191,18 +194,18 @@ export default function PresentationSlide() {
                 // --- 2. PARAGRAPHS & TEXT ---
                 p: ({ ...props }) => (
                   <p
-                    className="leading-7 [&:not(:first-child)]:mt-6 text-slate-400"
+                    className="leading-7 [&:not(:first-child)]:mt-2 text-muted-foreground"
                     {...props}
                   />
                 ),
                 strong: ({ ...props }) => (
-                  <span className="font-bold text-slate-100" {...props} />
+                  <span className="font-bold text-foreground" {...props} />
                 ),
 
                 // --- 3. LISTS (Styling with custom markers) ---
                 ul: ({ ...props }) => (
                   <ul
-                    className="my-6 ml-6 list-disc [&>li]:mt-2 text-slate-300"
+                    className="my-6 ml-6 list-disc [&>li]:mt-2 text-muted-foreground"
                     {...props}
                   />
                 ),
@@ -215,12 +218,12 @@ export default function PresentationSlide() {
                 // --- 4. BLOCKQUOTES -> ALERTS ---
                 blockquote: ({ ...props }) => (
                   <div className="my-6">
-                    <Alert className="bg-blue-950/50 border-blue-800 text-blue-200">
-                      <Info className="h-4 w-4 stroke-blue-400" />
-                      <AlertTitle className="text-blue-400 font-bold">
+                    <Alert className="bg-muted/50 border-primary/20 text-foreground">
+                      <Info className="h-4 w-4 stroke-primary" />
+                      <AlertTitle className="text-primary font-bold">
                         Important Note
                       </AlertTitle>
-                      <AlertDescription className="mt-2 border-l-2 border-blue-800 pl-4 italic">
+                      <AlertDescription className="mt-2 border-l-2 border-primary/20 pl-4 italic text-muted-foreground">
                         {props.children}
                       </AlertDescription>
                     </Alert>
@@ -229,24 +232,24 @@ export default function PresentationSlide() {
 
                 // --- 6. TABLES -> SHADCN TABLE COMPONENTS ---
                 table: ({ ...props }) => (
-                  <div className="my-8 rounded-md border border-slate-700 overflow-hidden">
+                  <div className="my-8 rounded-md border border-border overflow-hidden">
                     <Table {...props} />
                   </div>
                 ),
                 thead: ({ ...props }) => (
-                  <TableHeader className="bg-slate-800" {...props} />
+                  <TableHeader className="bg-muted" {...props} />
                 ),
                 tr: ({ ...props }) => (
                   <TableRow
-                    className="hover:bg-slate-800/50 border-slate-700"
+                    className="hover:bg-muted/50 border-border"
                     {...props}
                   />
                 ),
                 th: ({ ...props }) => (
-                  <TableHead className="text-slate-200 font-bold" {...props} />
+                  <TableHead className="text-foreground font-bold" {...props} />
                 ),
                 td: ({ ...props }) => (
-                  <TableCell className="text-slate-300" {...props} />
+                  <TableCell className="text-muted-foreground" {...props} />
                 ),
 
                 // --- 7. LINKS -> BUTTONS / HOVERCARDS ---
@@ -255,7 +258,7 @@ export default function PresentationSlide() {
                     <HoverCardTrigger asChild>
                       <Button
                         variant="link"
-                        className="text-blue-400 h-auto p-0 underline"
+                        className="text-primary h-auto p-0 underline"
                         asChild
                       >
                         <a href={href} {...props}>
@@ -263,7 +266,7 @@ export default function PresentationSlide() {
                         </a>
                       </Button>
                     </HoverCardTrigger>
-                    <HoverCardContent className="w-80 bg-slate-900 border-slate-700 text-slate-300">
+                    <HoverCardContent className="w-80 bg-card border-border text-card-foreground">
                       <div className="flex justify-between space-x-4">
                         <Avatar>
                           <AvatarFallback>🔗</AvatarFallback>
@@ -272,9 +275,9 @@ export default function PresentationSlide() {
                           <h4 className="text-sm font-semibold">
                             External Link
                           </h4>
-                          <p className="text-sm">
+                          <p className="text-sm text-muted-foreground">
                             Navigates to:{" "}
-                            <span className="text-blue-400">{href}</span>
+                            <span className="text-primary">{href}</span>
                           </p>
                         </div>
                       </div>
@@ -285,7 +288,7 @@ export default function PresentationSlide() {
                 // --- 8. IMAGES -> CARD WITH CAPTION ---
                 img: ({ ...props }) => (
                   <div className="my-8">
-                    <Card className="overflow-hidden border-slate-700 bg-slate-800">
+                    <Card className="overflow-hidden border-border bg-muted">
                       <AspectRatio ratio={16 / 5}>
                         <img
                           className="w-full h-full object-cover transition-transform hover:scale-105 duration-500"
@@ -293,7 +296,7 @@ export default function PresentationSlide() {
                           alt={props.alt}
                         />
                       </AspectRatio>
-                      <CardFooter className="py-2 text-xs text-slate-400 bg-slate-900/50 justify-center">
+                      <CardFooter className="py-2 text-xs text-muted-foreground bg-muted/50 justify-center">
                         Image: {props.alt}
                       </CardFooter>
                     </Card>
@@ -302,7 +305,7 @@ export default function PresentationSlide() {
 
                 // --- 9. HORIZONTAL RULE -> SEPARATOR ---
                 hr: ({ ...props }) => (
-                  <Separator className="my-12 bg-slate-700" {...props} />
+                  <Separator className="my-4 bg-border" {...props} />
                 ),
 
                 // --- 10. CHECKBOX (GFM TASK LISTS) ---
@@ -312,7 +315,7 @@ export default function PresentationSlide() {
                       <Checkbox
                         checked={props.checked}
                         disabled
-                        className="mr-2 border-slate-500 data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500"
+                        className="mr-2 border-muted-foreground data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                       />
                     );
                   }
@@ -320,16 +323,14 @@ export default function PresentationSlide() {
                 },
               }}
             >
-              {SLIDE_CONTENT_MARKDOWN}
+              {SLIDE_CONTENT_MARKDOWN_1}
             </ReactMarkdown>
 
             {/* Slide Footer */}
-            <div className="mt-20 pt-6 border-t border-slate-800 flex justify-between text-xs text-slate-500">
+            <div className="mt-8 pt-6 border-t border-border flex justify-between text-xs text-muted-foreground">
               <span>CONFIDENTIAL</span>
               <span>Page 1 of 1</span>
             </div>
-          </ScrollArea>
-        </AspectRatio>
       </Card>
     </div>
   );
