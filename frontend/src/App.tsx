@@ -85,21 +85,18 @@ useEffect(() => {
 export default App;
  */
 
-
-
-
-//gemini
-
 import React from "react";
 import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm"; // REQUIRED: npm install remark-gfm
+import remarkGfm from "remark-gfm"; 
 
-// --- Shadcn UI Imports (Assuming standard installation paths) ---
 import { Card, CardFooter } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableCell,
@@ -108,16 +105,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
-//import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
-import { Info } from "lucide-react";
+import { Info, Terminal } from "lucide-react";
 
-// --- The "Kitchen Sink" Markdown Text ---
 const SLIDE_CONTENT_MARKDOWN_1 = `
 # Q4 Project Overview
 ## System Architecture & Deliverables
@@ -160,177 +155,259 @@ Here is how the new gateway config looks:
 Review full documentation at [Internal Wiki](https://wiki.internal.company).
 
 ![System Diagram](https://images.unsplash.com/photo-1558494949-ef526b0042a0?w=800&auto=format&fit=crop&q=60)
+
+# 🚀 Project Titan: Q4 Technical Review
+## Architecture, Performance, & Roadmap
+
+> **CRITICAL UPDATE:** We have successfully migrated the legacy database. Please ensure all microservices are pointing to the \`production-v2\` cluster by Friday.
+
+---
+
+### 1. System Status & Health
+We are seeing a massive improvement in latency since the **Rust** rewrite.
+
+| Service Name | Latency (ms) | Uptime | Status |
+| :--- | :---: | :---: | :--- |
+| **Auth Service** | 45ms | 99.99% | ✅ Stable |
+| **Payment Gateway** | 120ms | 99.95% | ⚠️ Investigating |
+| **Data Ingestion** | 800ms | 98.00% | ❌ Critical |
+
+---
+
+### 2. The New API Schema
+We are using strict typing now. Review the [Internal Documentation](https://ui.shadcn.com) for details.
+
+Here is the new **React Hook** for fetching user data:
+
+\`\`\`tsx
+import { useQuery } from '@tanstack/react-query';
+
+interface User {
+  id: string;
+  role: 'admin' | 'guest';
+}
+
+export function useUser(id: string) {
+  return useQuery<User>({
+    queryKey: ['user', id],
+    queryFn: async () => {
+      const res = await fetch(\`/api/v2/users/\${id}\`);
+      if (!res.ok) throw new Error('Failed to fetch');
+      return res.json();
+    } 
+  });
+}
+\`\`\`
+
+You can also use the inline command \`npx project-titan init\` to start.
+
+---
+
+### 3. Deployment Checklist
+Please ensure the following are completed before the **Code Freeze**:
+
+- [x] Run integration tests (\`npm run test:e2e\`)
+- [x] Update environment variables in **Vercel**
+- [ ] ~~Approve Pull Request #402~~ (Cancelled)
+- [ ] Notify the **QA Team** via Slack
+
+### 4. Visual Proof
+The new dashboard UI is now live on staging.
+
+![Dashboard Preview](https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&auto=format&fit=crop&q=80)
 `;
 
-export default function PresentationSlide() {
+export default function MarkdownRenderer() {
   return (
-    <div className="flex items-center justify-center overflow-hidden min-h-screen bg-background p-8">
-      <Card className="w-full shadow-2xl overflow-hidden border-border bg-card text-card-foreground p-12">          
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              components={{
-                // --- 1. HEADINGS (Typography & Slide Structure) ---
-                h1: ({ ...props }) => (
-                  <div className="mb-4 border-b border-border pb-4">
-                    <h1
-                      className="text-4xl font-extrabold tracking-tight lg:text-5xl text-primary"
-                      {...props}
+    <div className="flex items-center justify-center overflow-hidden h-screen bg-background p-8">
+      <Card className="w-full shadow-2xl overflow-hidden border-border bg-card text-card-foreground p-12 h-[95vh] ">
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm]}
+          components={{
+            // --- 1. HEADINGS (Typography & Slide Structure) ---
+            h1: ({ ...props }) => (
+              <div className="mb-2 border-b border-border pb-2 ">
+                <h1
+                  className="text-4xl font-extrabold tracking-tight lg:text-5xl text-primary"
+                  {...props}
+                />
+              </div>
+            ),
+            h2: ({ ...props }) => (
+              // CHANGE 4: Use Chart colors for distinctive accent borders
+              <h2
+                className="mt-4 mb-2 text-2xl font-bold tracking-tight text-foreground border-l-8 border-chart-2 pl-4 py-1 bg-secondary/20 rounded-r-lg"
+                {...props}
+              />
+            ),
+            h3: ({ ...props }) => (
+              <h3
+                className=" mb-2 text-xl font-semibold text-foreground"
+                {...props}
+              />
+            ),
+
+            // --- 2. PARAGRAPHS & TEXT ---
+            p: ({ ...props }) => (
+              <p className="leading-7  text-muted-foreground" {...props} />
+            ),
+            strong: ({ ...props }) => (
+              // CHANGE 5: Make bold text pop with Accent color
+              <span className="font-extrabold text-foreground" {...props} />
+            ),
+            // --- 3. LISTS (Styling with custom markers) ---
+            ul: ({ ...props }) => (
+              // CHANGE 6: Colorful Bullets using 'marker' utility
+              <ul
+                className="my-3 ml-6 list-disc [&>li]:mt-2 marker:text-chart-4 marker:text-xl text-foreground/90"
+                {...props}
+              />
+            ),
+            li: ({ children, ...props }) => {
+              return (
+                <li {...props} className="pl-1">
+                  {children}
+                </li>
+              );
+            },
+            blockquote: ({ ...props }) => (
+              <div className="my-4 transform hover:scale-[1.01] transition-transform duration-300 ">
+                <Alert className="bg-accent/10 border-l-4 border-l-accent border-y-0 border-r-0 rounded-[var(--radius)] text-foreground shadow-sm">
+                  <Info className="h-5 w-5 text-foreground" />
+                  <AlertTitle className="text-foreground font-bold uppercase tracking-wider text-xs ml-2">
+                    Insight
+                  </AlertTitle>
+                  <AlertDescription className="mt-2 pl-2 text-foreground font-semibold italic text-lg">
+                    {props.children}
+                  </AlertDescription>
+                </Alert>
+              </div>
+            ),
+
+            // --- 6. TABLES -> SHADCN TABLE COMPONENTS ---
+
+            table: ({ ...props }) => (
+              // Container: White background, light grey border
+              <div className="my-4 rounded-md border border-primary overflow-hidden bg-card shadow-sm">
+                <Table {...props} />
+              </div>
+            ),
+            thead: ({ ...props }) => (
+              // Header background: Very light grey to distinguish from body
+              <TableHeader className="bg-muted/50" {...props} />
+            ),
+            tr: ({ ...props }) => (
+              // Row hover: Light grey interaction
+              <TableRow
+                className="hover:bg-muted/50 border-b border-border"
+                {...props}
+              />
+            ),
+            th: ({ ...props }) => (
+              // Header text: Dark black/grey, bold
+              <TableHead className="text-foreground font-bold" {...props} />
+            ),
+            td: ({ ...props }) => (
+              // Cell text: Slightly softer grey for readability
+              <TableCell className="text-muted-foreground" {...props} />
+            ),
+
+            // --- 7. LINKS -> BUTTONS / HOVERCARDS ---
+            a: ({ href, children, ...props }) => (
+              <HoverCard>
+                <HoverCardTrigger asChild>
+                  <Button
+                    variant="link"
+                    className="text-primary h-auto p-0 underline"
+                    asChild
+                  >
+                    <a href={href} {...props}>
+                      {children}
+                    </a>
+                  </Button>
+                </HoverCardTrigger>
+                <HoverCardContent className="w-80 bg-card border-border text-card-foreground">
+                  <div className="flex justify-between space-x-4">
+                    <Avatar>
+                      <AvatarFallback>🔗</AvatarFallback>
+                    </Avatar>
+                    <div className="space-y-1">
+                      <h4 className="text-sm font-semibold">External Link</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Navigates to:{" "}
+                        <span className="text-primary">{href}</span>
+                      </p>
+                    </div>
+                  </div>
+                </HoverCardContent>
+              </HoverCard>
+            ),
+
+            // --- 8. IMAGES -> CARD WITH CAPTION ---
+            img: ({ ...props }) => (
+              <div className="my-4">
+                <Card className="overflow-hidden border-border bg-muted">
+                  <AspectRatio ratio={16 / 5}>
+                    <img
+                      className="w-full h-full object-cover transition-transform hover:scale-105 duration-500"
+                      src={props.src}
+                      alt={props.alt}
                     />
+                  </AspectRatio>
+                  <CardFooter className="py-2 text-xs text-muted-foreground bg-muted/50 justify-center">
+                    Image: {props.alt}
+                  </CardFooter>
+                </Card>
+              </div>
+            ),
+
+            // --- 9. HORIZONTAL RULE -> SEPARATOR ---
+            hr: ({ ...props }) => (
+              <Separator className="my-4 bg-border" {...props} />
+            ),
+            code: ({ inline, className, children, ...props }: any) => {
+              const match = /language-(\w+)/.exec(className || "");
+              return !inline && match ? (
+                <div className="my-4 rounded-lg border border-border overflow-hidden bg-white">
+                  <div className="bg-primary px-4 py-2 text-xs font-mono text-white border-b border-border flex items-center gap-2">
+                    <Terminal className="w-3 h-3" /> {match[1]}
                   </div>
-                ),
-                h2: ({ ...props }) => (
-                  <h2
-                    className="mt-6 mb-2 text-2xl font-semibold tracking-tight text-foreground border-l-4 border-primary pl-4"
+                  <SyntaxHighlighter
+                    style={oneLight}
+                    language={match[1]}
+                    PreTag="div"
+                    customStyle={{ margin: 0, background: "transparent" }}
                     {...props}
+                  >
+                    {String(children).replace(/\n$/, "")}
+                  </SyntaxHighlighter>
+                </div>
+              ) : (
+                <Badge
+                  variant="outline"
+                  className="text-primary border-primary/30 mx-1 font-mono"
+                >
+                  {children}
+                </Badge>
+              );
+            },
+            // --- 10. CHECKBOX (GFM TASK LISTS) ---
+            input: ({ ...props }) => {
+              if (props.type === "checkbox") {
+                return (
+                  <Checkbox
+                    checked={props.checked}
+                    disabled
+                    className="mr-2 border-muted-foreground data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                   />
-                ),
-                h3: ({ ...props }) => (
-                  <h3
-                    className="mt-4 mb-2 text-xl font-semibold text-foreground"
-                    {...props}
-                  />
-                ),
-
-                // --- 2. PARAGRAPHS & TEXT ---
-                p: ({ ...props }) => (
-                  <p
-                    className="leading-7 [&:not(:first-child)]:mt-2 text-muted-foreground"
-                    {...props}
-                  />
-                ),
-                strong: ({ ...props }) => (
-                  <span className="font-bold text-foreground" {...props} />
-                ),
-
-                // --- 3. LISTS (Styling with custom markers) ---
-                ul: ({ ...props }) => (
-                  <ul
-                    className="my-6 ml-6 list-disc [&>li]:mt-2 text-muted-foreground"
-                    {...props}
-                  />
-                ),
-                li: ({ children, ...props }) => {
-                  // Hack to detect if this list item is a "task list" item (checkbox)
-                  // remark-gfm adds a specialized structure we can detect, or we rely on the input type checkbox
-                  return <li {...props}>{children}</li>;
-                },
-
-                // --- 4. BLOCKQUOTES -> ALERTS ---
-                blockquote: ({ ...props }) => (
-                  <div className="my-6">
-                    <Alert className="bg-muted/50 border-primary/20 text-foreground">
-                      <Info className="h-4 w-4 stroke-primary" />
-                      <AlertTitle className="text-primary font-bold">
-                        Important Note
-                      </AlertTitle>
-                      <AlertDescription className="mt-2 border-l-2 border-primary/20 pl-4 italic text-muted-foreground">
-                        {props.children}
-                      </AlertDescription>
-                    </Alert>
-                  </div>
-                ),
-
-                // --- 6. TABLES -> SHADCN TABLE COMPONENTS ---
-                table: ({ ...props }) => (
-                  <div className="my-8 rounded-md border border-border overflow-hidden">
-                    <Table {...props} />
-                  </div>
-                ),
-                thead: ({ ...props }) => (
-                  <TableHeader className="bg-muted" {...props} />
-                ),
-                tr: ({ ...props }) => (
-                  <TableRow
-                    className="hover:bg-muted/50 border-border"
-                    {...props}
-                  />
-                ),
-                th: ({ ...props }) => (
-                  <TableHead className="text-foreground font-bold" {...props} />
-                ),
-                td: ({ ...props }) => (
-                  <TableCell className="text-muted-foreground" {...props} />
-                ),
-
-                // --- 7. LINKS -> BUTTONS / HOVERCARDS ---
-                a: ({ href, children, ...props }) => (
-                  <HoverCard>
-                    <HoverCardTrigger asChild>
-                      <Button
-                        variant="link"
-                        className="text-primary h-auto p-0 underline"
-                        asChild
-                      >
-                        <a href={href} {...props}>
-                          {children}
-                        </a>
-                      </Button>
-                    </HoverCardTrigger>
-                    <HoverCardContent className="w-80 bg-card border-border text-card-foreground">
-                      <div className="flex justify-between space-x-4">
-                        <Avatar>
-                          <AvatarFallback>🔗</AvatarFallback>
-                        </Avatar>
-                        <div className="space-y-1">
-                          <h4 className="text-sm font-semibold">
-                            External Link
-                          </h4>
-                          <p className="text-sm text-muted-foreground">
-                            Navigates to:{" "}
-                            <span className="text-primary">{href}</span>
-                          </p>
-                        </div>
-                      </div>
-                    </HoverCardContent>
-                  </HoverCard>
-                ),
-
-                // --- 8. IMAGES -> CARD WITH CAPTION ---
-                img: ({ ...props }) => (
-                  <div className="my-8">
-                    <Card className="overflow-hidden border-border bg-muted">
-                      <AspectRatio ratio={16 / 5}>
-                        <img
-                          className="w-full h-full object-cover transition-transform hover:scale-105 duration-500"
-                          src={props.src}
-                          alt={props.alt}
-                        />
-                      </AspectRatio>
-                      <CardFooter className="py-2 text-xs text-muted-foreground bg-muted/50 justify-center">
-                        Image: {props.alt}
-                      </CardFooter>
-                    </Card>
-                  </div>
-                ),
-
-                // --- 9. HORIZONTAL RULE -> SEPARATOR ---
-                hr: ({ ...props }) => (
-                  <Separator className="my-4 bg-border" {...props} />
-                ),
-
-                // --- 10. CHECKBOX (GFM TASK LISTS) ---
-                input: ({ ...props }) => {
-                  if (props.type === "checkbox") {
-                    return (
-                      <Checkbox
-                        checked={props.checked}
-                        disabled
-                        className="mr-2 border-muted-foreground data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                      />
-                    );
-                  }
-                  return <input {...props} />;
-                },
-              }}
-            >
-              {SLIDE_CONTENT_MARKDOWN_1}
-            </ReactMarkdown>
-
-            {/* Slide Footer */}
-            <div className="mt-8 pt-6 border-t border-border flex justify-between text-xs text-muted-foreground">
-              <span>CONFIDENTIAL</span>
-              <span>Page 1 of 1</span>
-            </div>
+                );
+              }
+              return <input {...props} />;
+            },
+          }}
+        >
+          {SLIDE_CONTENT_MARKDOWN_1}
+        </ReactMarkdown>
       </Card>
     </div>
   );
