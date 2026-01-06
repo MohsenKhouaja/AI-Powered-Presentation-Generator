@@ -1,7 +1,8 @@
-import { jwtDecode } from "jwt-decode";
-import {  useState } from "react";
+import { jwtDecode, type JwtPayload } from "jwt-decode";
+import { useState } from "react";
 import type { ReactNode } from "react";
 import authContext from "./auth";
+import { ReceiptEuro } from "lucide-react";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [email, setEmail] = useState("");
@@ -15,6 +16,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     options: object
   ): Promise<string | null> => {
     try {
+      if (isLoading) {
+        return null;
+      }
       setIsLoading(true);
       const response = await fetch(`/api/auth/${path}`, {
         ...options,
@@ -28,7 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!token) {
           throw Error("token is missing");
         }
-        const decodedJWT = jwtDecode(token);
+        const decodedJWT = jwtDecode<JwtPayload>(token);
         setToken(token);
         setExpiration(decodedJWT.exp || null);
         setIsLoggedIn(true);
@@ -48,7 +52,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ email: email, password: password }),
     });
@@ -59,7 +62,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ email: email, password: password }),
     });
@@ -81,7 +83,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setExpiration(null);
   };
   //TODO add middleware fetchwithauth
-
+  // https://chat.deepseek.com/a/chat/s/342c88a8-7320-4023-ba0e-105ea9afb338
+  // https://chat.deepseek.com/a/chat/s/430790bf-3fe7-42bf-8cbf-0f175a925be9
   return (
     <authContext.Provider
       value={{
