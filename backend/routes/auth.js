@@ -1,6 +1,7 @@
 import express from "express";
 import jsonwebtoken from "jsonwebtoken";
 import dotenv from "dotenv";
+dotenv.config();
 const authRouter = express.Router();
 /* interface JwtPayload {
   sub: string;
@@ -105,3 +106,5 @@ authRouter.post("/refresh", async (req, res) => {
     res.status(500).send("internal server error");
   }
 });
+
+export default authRouter;
