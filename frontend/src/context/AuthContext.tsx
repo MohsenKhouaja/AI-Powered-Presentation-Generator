@@ -2,10 +2,11 @@ import { jwtDecode, type JwtPayload } from "jwt-decode";
 import { useState } from "react";
 import type { ReactNode } from "react";
 import authContext from "./auth";
-import { ReceiptEuro } from "lucide-react";
+
+type HttpMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [token, setToken] = useState<string | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -24,22 +25,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ...options,
       });
       if (!response.ok) {
+        setToken(null);
+        setIsLoading(false);
         throw new Error(`${response.status}: ${response.statusText}`);
       }
-      const token = await response.json();
+      const tokenData = await response.json();
       setIsLoading(false);
       try {
-        if (!token) {
+        if (!tokenData) {
           throw Error("token is missing");
         }
-        const decodedJWT = jwtDecode<JwtPayload>(token);
-        setToken(token);
+        const decodedJWT = jwtDecode<JwtPayload>(tokenData);
+        setToken(tokenData);
         setExpiration(decodedJWT.exp || null);
         setIsLoggedIn(true);
+        return tokenData;
       } catch (error) {
         console.log("token error: ", error);
+        return null;
       }
-      return token;
     } catch (error) {
       console.log("error: ", error);
       setIsLoading(false);
@@ -68,33 +72,77 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
   const refresh = async () => {
     console.log("refresh called");
-    await fetchToken("refresh", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    try {
+      const newToken = await fetchToken("refresh", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      if (!newToken) {
+        logout();
+      }
+      return newToken;
+    } catch (error) {
+      console.log(error);
+      return null;
+    }
   };
   const logout = () => {
     setIsLoggedIn(false);
     setToken(null);
-    setEmail("");
     setExpiration(null);
   };
-  //TODO add middleware fetchwithauth
-  // https://chat.deepseek.com/a/chat/s/342c88a8-7320-4023-ba0e-105ea9afb338
-  // https://chat.deepseek.com/a/chat/s/430790bf-3fe7-42bf-8cbf-0f175a925be9
+
+  const fetchwithauth = async (
+    path: string,
+    method: HttpMethod,
+    options?: object
+  ): Promise<Response> => {
+    let newToken = token;
+    if (expiration && Date.now() >= expiration * 1000) {
+      newToken = await refresh();
+    }
+    let response = await fetch(`${path}`, {
+      method: method,
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${newToken}`,
+        ...(options as any)?.headers,
+      },
+    });
+    if (response.status == 401) {
+      newToken = await refresh();
+      response = await fetch(`${path}`, {
+        method: method,
+        ...options,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${newToken}`,
+          ...(options as any)?.headers,
+        },
+      });
+    }
+    if (!response.ok) {
+      throw new Error(
+        `Request failed: ${response.status} ${response.statusText}`
+      );
+    }
+    return response;
+  };
   return (
     <authContext.Provider
       value={{
-        setEmail,
         isLoading,
         isLoggedIn,
         login,
         register,
         logout,
         token,
+        fetchwithauth,
+
+        setEmail,
       }}
     >
       {children}
