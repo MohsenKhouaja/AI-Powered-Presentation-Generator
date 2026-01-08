@@ -2,7 +2,7 @@ import jsonwebtoken from "jsonwebtoken";
 import dotenv from "dotenv";
 dotenv.config();
 
-export function authMiddleware(req, res, next) {
+function authMiddleware(req, res, next) {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -18,3 +18,5 @@ export function authMiddleware(req, res, next) {
     res.status(401).send("unauthorized, token expired");
   }
 }
+
+export default authMiddleware;
