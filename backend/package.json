@@ -6,10 +6,13 @@
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.3",
+    "mysql2": "^3.16.0",
+    "sql-template-strings": "^2.2.2",
     "typescript": "^5.9.3"
   },
   "type": "module",
   "scripts": {
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "test:db": "node database/index.js"
   }
 }
