@@ -41,7 +41,7 @@ export function AuthForm() {
         onValueChange={changeMode}
         className="w-full max-w-[400px] min-h-[500px] flex flex-col"
       >
-        <TabsList className="grid w-full grid-cols-2 mb-4 bg-muted/50 shrink-0">
+        <TabsList className="grid w-full grid-cols-2 mb-4 bg-muted/50 shrink-0 text-[clamp(12px,1rem,18px)]">
           <TabsTrigger
             value="login"
             className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
@@ -58,10 +58,10 @@ export function AuthForm() {
         <TabsContent value="login" className="flex-1 mt-0">
           <Card className="shadow-2xl border-border/50 bg-card/80 backdrop-blur-sm h-full flex flex-col">
             <CardHeader className="space-y-1">
-              <CardTitle className="text-2xl font-bold tracking-tight">
+              <CardTitle className="text-[clamp(20px,2xl,32px)] font-bold tracking-tight">
                 Welcome back
               </CardTitle>
-              <CardDescription className="text-muted-foreground">
+              <CardDescription className="text-[clamp(12px,1rem,18px)] text-muted-foreground">
                 Enter your email to sign in to your account
               </CardDescription>
             </CardHeader>
@@ -70,7 +70,7 @@ export function AuthForm() {
                 <div className="grid gap-2">
                   <Label
                     htmlFor="email"
-                    className="text-sm font-medium uppercase tracking-wider text-muted-foreground/80"
+                    className="text-[clamp(10px,sm,16px)] font-medium uppercase tracking-wider text-muted-foreground/80"
                   >
                     Email
                   </Label>
@@ -86,7 +86,7 @@ export function AuthForm() {
                 <div className="grid gap-2">
                   <Label
                     htmlFor="password"
-                    className="text-sm font-medium uppercase tracking-wider text-muted-foreground/80"
+                    className="text-[clamp(10px,sm,16px)] font-medium uppercase tracking-wider text-muted-foreground/80"
                   >
                     Password
                   </Label>
@@ -101,7 +101,7 @@ export function AuthForm() {
               </CardContent>
               <CardFooter className="mt-auto pt-6">
                 <Button
-                  className="w-full h-11 text-base font-semibold transition-all active:scale-[0.98]"
+                  className="w-full h-11 text-[clamp(14px,base,20px)] font-semibold transition-all active:scale-[0.98]"
                   disabled={isLoading}
                 >
                   {isLoading ? "Signing in..." : "Sign In"}
@@ -113,10 +113,10 @@ export function AuthForm() {
         <TabsContent value="signup" className="flex-1 mt-0">
           <Card className="shadow-2xl border-border/50 bg-card/80 backdrop-blur-sm h-full flex flex-col">
             <CardHeader className="space-y-1">
-              <CardTitle className="text-2xl font-bold tracking-tight">
+              <CardTitle className="text-[clamp(20px,2xl,32px)] font-bold tracking-tight">
                 Create an account
               </CardTitle>
-              <CardDescription className="text-muted-foreground">
+              <CardDescription className="text-[clamp(12px,1rem,18px)] text-muted-foreground">
                 Enter your details to get started
               </CardDescription>
             </CardHeader>
@@ -125,7 +125,7 @@ export function AuthForm() {
                 <div className="grid gap-2">
                   <Label
                     htmlFor="signup-email"
-                    className="text-sm font-medium uppercase tracking-wider text-muted-foreground/80"
+                    className="text-[clamp(10px,sm,16px)] font-medium uppercase tracking-wider text-muted-foreground/80"
                   >
                     Email
                   </Label>
@@ -141,7 +141,7 @@ export function AuthForm() {
                 <div className="grid gap-2">
                   <Label
                     htmlFor="signup-password"
-                    className="text-sm font-medium uppercase tracking-wider text-muted-foreground/80"
+                    className="text-[clamp(10px,sm,16px)] font-medium uppercase tracking-wider text-muted-foreground/80"
                   >
                     Password
                   </Label>
@@ -156,7 +156,7 @@ export function AuthForm() {
               </CardContent>
               <CardFooter className="mt-auto pt-6">
                 <Button
-                  className="w-full h-11 text-base font-semibold transition-all active:scale-[0.98]"
+                  className="w-full h-11 text-[clamp(14px,base,20px)] font-semibold transition-all active:scale-[0.98]"
                   disabled={isLoading}
                 >
                   {isLoading ? "Creating account..." : "Create Account"}

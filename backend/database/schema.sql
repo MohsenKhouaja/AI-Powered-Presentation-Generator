@@ -1,0 +1,31 @@
+
+DROP TABLE IF EXISTS slides;
+
+DROP TABLE IF EXISTS presentations;
+
+DROP TABLE IF EXISTS users;
+
+SET FOREIGN_KEY_CHECKS = 1;
+
+CREATE TABLE IF NOT EXISTS users (
+    uuid VARCHAR(255) PRIMARY KEY,
+    username VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    password VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS presentations (
+    uuid VARCHAR(255) PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    user_id VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users (uuid) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS slides (
+    uuid VARCHAR(255) PRIMARY KEY,
+    content TEXT NOT NULL,
+    presentation_id VARCHAR(255) NOT NULL,
+    slide_order INT NOT NULL,
+    FOREIGN KEY (presentation_id) REFERENCES presentations (uuid) ON DELETE CASCADE
+);
