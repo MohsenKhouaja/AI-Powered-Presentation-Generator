@@ -1,0 +1,52 @@
+Table users {
+  uuid uuid [pk]
+  username varchar [not null]
+  email varchar [not null]
+  password varchar [not null]
+}
+
+Table files {
+  id uuid [pk]
+  context uuid [fk] not null
+  storage_key text        -- path or key in S3 / disk / cloud
+  mime_type text          -- image/png, application/pdf
+  file_type text          -- image | pdf (optional but useful)
+  size_bytes bigint
+}
+
+Table contexts {
+  uuid [pk]
+  prompt
+  presentation_id varchar
+}
+
+Table presentations {
+  uuid varchar [pk]
+  title varchar [not null]
+  user_id varchar [not null]
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+}
+
+Table slides {
+  uuid varchar [pk]
+  content text [not null]
+  presentation_id varchar [not null]
+  slide_order int [not null]
+}
+
+Table presentations_access {
+  uuid [pk]
+  user_id varchar
+  presentation_id varchar
+  access_type enum(edit, view)
+  expires_at date
+}
+
+
+
+Ref: presentations.user_id > users.uuid [delete: cascade]
+Ref: slides.presentation_id > presentations.uuid [delete: cascade]
+Ref: files.context > contexts.uuid [delete: cascade]
+Ref: contexts.presentation_id - presentations.uuid [delete: cascade]
+Ref: presentations_access.user_id > users.uuid [delete: cascade]
+Ref: presentations_access.presentation_id > presentations.uuid [delete: cascade]
