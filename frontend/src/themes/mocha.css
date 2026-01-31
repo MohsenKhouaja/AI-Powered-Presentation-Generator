@@ -1,4 +1,4 @@
-:root {
+[data-theme="mocha"] {
   --background: oklch(0.9529 0.0146 102.4597);
   --foreground: oklch(0.4063 0.0255 40.3627);
   --card: oklch(0.9529 0.0146 102.4597);
@@ -53,7 +53,7 @@
   --spacing: 0.25rem;
 }
 
-.dark {
+[data-theme="mocha"].dark {
   --background: oklch(0.2042 0.0076 48.3300);
   --foreground: oklch(0.9529 0.0146 102.4597);
   --card: oklch(0.3291 0.0156 50.8936);

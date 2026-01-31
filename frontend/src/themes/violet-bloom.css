@@ -1,4 +1,4 @@
-:root {
+[data-theme="violet-bloom"] {
   --background: oklch(0.9940 0 0);
   --foreground: oklch(0 0 0);
   --card: oklch(0.9940 0 0);
@@ -53,7 +53,7 @@
   --spacing: 0.27rem;
 }
 
-.dark {
+[data-theme="violet-bloom"].dark {
   --background: oklch(0.2223 0.0060 271.1393);
   --foreground: oklch(0.9551 0 0);
   --card: oklch(0.2568 0.0076 274.6528);
