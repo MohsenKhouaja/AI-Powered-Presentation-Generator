@@ -43,8 +43,8 @@ export function LandingPage() {
             <div className="min-h-[84px] flex items-start justify-center">
               <p className="max-w-[700px] text-lg text-muted-foreground">
                 Transform your markdown into beautiful, responsive slide decks
-                with the power of AI. Choose from our curated collection of themes
-                or let AI design one for you.
+                with the power of AI. Choose from our curated collection of
+                themes or let AI design one for you.
               </p>
             </div>
 
@@ -102,8 +102,8 @@ export function LandingPage() {
               </div>
               <div className="min-h-[72px]">
                 <p className="text-muted-foreground">
-                  Generates slides instantly from your notes. No more hours spent
-                  aligning text boxes.
+                  Generates slides instantly from your notes. No more hours
+                  spent aligning text boxes.
                 </p>
               </div>
             </div>
@@ -116,8 +116,8 @@ export function LandingPage() {
               </div>
               <div className="min-h-[72px]">
                 <p className="text-muted-foreground">
-                  Slides that not only look good on projectors but also on mobile
-                  devices and tablets.
+                  Slides that not only look good on projectors but also on
+                  mobile devices and tablets.
                 </p>
               </div>
             </div>
@@ -130,8 +130,8 @@ export function LandingPage() {
               </div>
               <div className="min-h-[72px]">
                 <p className="text-muted-foreground">
-                  Smart suggestions for layout, colors, and imagery to match your
-                  content's tone.
+                  Smart suggestions for layout, colors, and imagery to match
+                  your content's tone.
                 </p>
               </div>
             </div>
