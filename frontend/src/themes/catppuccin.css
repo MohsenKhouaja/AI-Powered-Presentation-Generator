@@ -1,4 +1,4 @@
-:root {
+[data-theme="catppuccin"] {
   --background: oklch(0.9578 0.0058 264.5321);
   --foreground: oklch(0.4355 0.0430 279.3250);
   --card: oklch(1.0000 0 0);
@@ -53,7 +53,7 @@
   --spacing: 0.25rem;
 }
 
-.dark {
+[data-theme="catppuccin"].dark {
   --background: oklch(0.2155 0.0254 284.0647);
   --foreground: oklch(0.8787 0.0426 272.2767);
   --card: oklch(0.2429 0.0304 283.9110);
