@@ -1,42 +1,49 @@
-# AI-Powered Presentation Generator
+CRUD Implementation Checklist
+1. Users (users)
+[ ] Create: Register a new user (Ensure password hashing!).
 
-## Project Context
+[ ] Read: Get user profile by uuid or username.
 
-The AI-Powered Presentation Generator is a full-stack web application designed to streamline the creation of presentations by leveraging artificial intelligence. This project combines a modern frontend interface with a robust backend API to automate and enhance the presentation creation workflow, reducing manual effort and improving content quality.
+[ ] Update: Change password or update email.
 
-## Project Description
+[ ] Delete: Remove user (Warning: This will cascade delete their presentations).
 
-This application enables users to generate professional presentations automatically using AI capabilities. The platform features user authentication, markdown content rendering, and interactive UI components. The frontend is built with React and TypeScript, providing a responsive and intuitive user interface, while the backend is powered by Node.js and Express, providing secure API endpoints with authentication middleware.
+2. Presentations (presentations)
+[ ] Create: Start a new presentation linked to a user_id.
 
-Key features include:
+[ ] Read (List): Get all presentations owned by a specific user.
 
-- User authentication and authorization
-- AI-powered presentation generation
-- Markdown content rendering and display
-- Multi-user real-time editing using WebRTC
-- Sharing capabilities with granular access control (edit/view permissions)
-- AI-assisted editing with RAG context and intelligent agent capabilities
-- Multiple theme choices for customizable UI experience
+[ ] Read (Single): Get presentation details by uuid.
 
-## P2M Project Deliverables
+[ ] Update: Change the title.
 
-- **Frontend Application**: Fully functional React/TypeScript web interface with component library
-- **Backend API**: Express.js REST API with authentication and presentation endpoints
-- **Database Schema**: Complete database structure with migrations and seeders
-- **Authentication System**: Secure user login and authorization middleware
-- **UI Component Library**: Reusable React components for consistent UI/UX
-- **API Documentation**: Health check and routing endpoints for presentation management
-- **Deployment Configuration**: Environment configuration and CORS setup
+[ ] Delete: Remove presentation (Cascades to slides, access, and contexts).
 
-## Tools to Be Used
+3. Slides (slides)
+[ ] Create: Add a new slide to a presentation.
 
-- **Frontend**: React, TypeScript, Vite, TailwindCSS, Shadcn UI
-- **Backend**: Node.js, Express.js, PostgreSQL (or relevant database)
-- **Authentication**: Cookie-based sessions with JWT support
-- **Build Tools**: Tailwind CSS, PostCSS, ESLint
-- **Development**: Git, npm/yarn package management
-- **Testing**: Unit and integration test setup
+[ ] Read: Get all slides for a specific presentation_id (Sorted by slide_order).
 
-## Keywords
+[ ] Update: Edit slide content or reorder (slide_order).
 
-AI, presentation generation, full-stack web application, React, TypeScript, Node.js, Express.js, authentication, markdown rendering, REST API, TailwindCSS, Vite, responsive design, automated content generation, interactive UI
+[ ] Delete: Remove a specific slide.
+
+4. Contexts & Files (contexts & files)
+[ ] Create Context: Link a prompt or AI context to a presentation.
+
+[ ] Create File: Upload and link a file to a specific context_uuid.
+
+[ ] Read: Fetch the context and associated files for a presentation.
+
+[ ] Update: Update the prompt or file storage_key.
+
+[ ] Delete: Clean up files and context metadata.
+
+5. Access Management (presentations_access)
+[ ] Create: Grant view or edit access to another user.
+
+[ ] Read: List everyone who has access to a specific presentation.
+
+[ ] Update: Change access_type_enum or extend expires_at.
+
+[ ] Delete: Revoke access for a specific user.
