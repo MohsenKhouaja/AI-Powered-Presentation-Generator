@@ -14,5 +14,8 @@
   "scripts": {
     "dev": "node server.js",
     "test:db": "node database/index.js"
+  },
+  "devDependencies": {
+    "@types/node": "^25.1.0"
   }
 }
