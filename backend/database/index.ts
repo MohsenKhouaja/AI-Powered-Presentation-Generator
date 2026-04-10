@@ -18,7 +18,7 @@ const poolParams = {
   name: process.env.DB_NAME,
 };
 
-const pool = mysql2.createPool({
+export const pool = mysql2.createPool({
   host: poolParams.host,
   user: poolParams.user,
   password: poolParams.password,
@@ -38,5 +38,4 @@ try {
   await pool.query(await getSQLScript("schema"));
 } catch (err) {
   const mysqlErr = err as mysql2.QueryError;
-  
 }

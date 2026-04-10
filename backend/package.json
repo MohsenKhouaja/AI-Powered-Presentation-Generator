@@ -12,7 +12,7 @@
   },
   "type": "module",
   "scripts": {
-    "dev": "node server.js",
+    "dev": "node app.js",
     "test:db": "node database/index.js"
   },
   "devDependencies": {
