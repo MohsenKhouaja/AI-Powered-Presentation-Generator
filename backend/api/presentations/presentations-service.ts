@@ -112,7 +112,9 @@ const grantAccess = async (
   if (presentations.length === 0) {
     throw new Error("presnetation doesn't exist");
   }
-  const userOwnsPresentation: boolean = presentations[0].user_id === userId;
+  // serialize presentation row first (serializePresentation) before ownership checks to avoid direct snake_case coupling
+  const userOwnsPresentation: boolean =
+    serializePresentation(presentations[0]).userId === userId;
   if (!userOwnsPresentation) {
     throw new Error("user unauthorized to grand access");
   }

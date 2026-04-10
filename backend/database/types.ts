@@ -55,7 +55,7 @@ export type File = {
   fileType: string;
   sizeBytes: number;
 };
-export type fileInsert = Omit<File, "id">;
+export type fileInsert = File;
 
 export type EditAccess = {
   id: UUID;
@@ -80,13 +80,13 @@ export const serializeUserInsert = (row: userInsert | any): userInsert => ({
 
 export const serializePresentation = (
   row: any,
-  accessType?: "edit" | "own" ,
+  accessType?: "edit" | "own",
 ): Presentation => ({
   id: row.id ?? row.presentation_id,
   title: row.title,
   createdAt: toDate(row.createdAt ?? row.created_at),
   userId: row.userId ?? row.user_id,
-  AccessType: accessType ,
+  AccessType: accessType,
 });
 
 export const serializeSlide = (row: any, content: string): Slide => ({
