@@ -23,13 +23,13 @@ export type Presentation = {
   title: string;
   readonly userId: UUID;
   readonly createdAt: Date;
-  AccessType: "edit" | "own";
+  AccessType: AccessType | null;
 };
 export type presentationInsert = Omit<Presentation, "id" | "createdAt">;
 
 export type PresentationDetail = Presentation & {
   slides: Slide[];
-  context: Context;
+  context: Context | null;
 };
 
 export type Slide = {
@@ -80,13 +80,13 @@ export const serializeUserInsert = (row: userInsert | any): userInsert => ({
 
 export const serializePresentation = (
   row: any,
-  accessType?: "edit" | "own",
+  accessType?: "edit" | "own" ,
 ): Presentation => ({
   id: row.id ?? row.presentation_id,
   title: row.title,
   createdAt: toDate(row.createdAt ?? row.created_at),
   userId: row.userId ?? row.user_id,
-  AccessType: accessType || null,
+  AccessType: accessType ,
 });
 
 export const serializeSlide = (row: any, content: string): Slide => ({
@@ -116,8 +116,10 @@ export const serializePresentationDetail = (row: any): PresentationDetail => ({
   title: row.title,
   createdAt: toDate(row.createdAt ?? row.created_at),
   userId: row.userId ?? row.user_id,
-  view: toDate(row.view ?? row.last_viewed_at),
   slides: row.slides ?? [],
-  context: row.context ?? row.presentation_context,
-  AccessType: row.AccessType ?? row.accessType ?? row.access_type,
+  context: row.context ?? row.presentation_context ?? null,
+  AccessType: (row.AccessType ??
+    row.accessType ??
+    row.access_type ??
+    null) as AccessType | null,
 });

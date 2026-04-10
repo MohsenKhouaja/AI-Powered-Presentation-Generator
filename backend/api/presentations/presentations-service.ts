@@ -32,7 +32,8 @@ const findMany = async (userId: UUID): Promise<Presentation[]> => {
     if (i < editPresentationIdsArray.length - 1) query.append(SQL`, `);
   });
   query.append(SQL`)`);
-  const [editPresentationRows] = await pool.query(query);
+  const [editPresentationRows] =
+    editPresentationIdsArray.length > 0 ? await pool.query(query) : [];
   const editPresentations: Presentation[] = editPresentationRows.map((row) =>
     serializePresentation(row, "edit"),
   );
