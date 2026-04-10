@@ -40,11 +40,11 @@ CREATE TABLE IF NOT EXISTS slides (
 
 CREATE TABLE IF NOT EXISTS contexts (
     id VARCHAR(255) PRIMARY KEY,
-    prompt TEXT DEFAULT "",
+    prompt TEXT DEFAULT '',
     presentation_id VARCHAR(255) NOT NULL,
     FOREIGN KEY (presentation_id) REFERENCES presentations (id) ON DELETE CASCADE,
-    CONSTRAINT uq_presentation UNIQUE (presentation_id),
-)
+    CONSTRAINT uq_presentation UNIQUE (presentation_id)
+);
 CREATE TABLE IF NOT EXISTS files (
     id VARCHAR(255) PRIMARY KEY,
     context_id VARCHAR(255) NOT NULL,
