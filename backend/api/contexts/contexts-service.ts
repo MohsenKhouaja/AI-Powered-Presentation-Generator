@@ -1,18 +1,29 @@
 import { randomUUID } from "node:crypto";
 import { SQL } from "sql-template-strings";
-import { pool } from "../../database/index.js";
 import type { contextInsert, fileInsert } from "../../database/types.js";
+import type { Pool, PoolConnection } from "mysql2/promise";
 import { fileService } from "../files/files-service.js";
+import { runTransaction } from "../../database/index.js";
+const createTransaction = async (
+  db: Pool,
+  context: contextInsert,
+  files: fileInsert[],
+) => {
+  runTransaction(db, create, context, files);
+};
 
-const create = async (context: contextInsert, files: fileInsert[]) => {
-  const contextId = randomUUID();
-  const query = SQL`insert into contexts (id, prompt, presentation_id) values (${contextId}, ${context.prompt}, ${context.presentationId})`;
-  await pool.query(query);
+const create = async (
+  db: PoolConnection,
+  context: contextInsert,
+  files: fileInsert[],
+): Promise<void> => {
+  const query = SQL`insert into contexts (id, prompt, presentation_id) values (${context.id}, ${context.prompt}, ${context.presentationId})`;
+  await db.query(query);
   if (files.length > 0) {
-    await fileService.createMany(files);
+    await fileService.createMany(db, files);
   }
 };
 
 export const contextService = {
-  create: create,
+  create: createTransaction,
 };
