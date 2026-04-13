@@ -1,4 +1,4 @@
-import { PoolConnection } from "mysql2/promise";
+import type { PoolConnection } from "mysql2/promise";
 import { randomUUID, UUID } from "node:crypto";
 import {
   editAccessInsert,
@@ -7,7 +7,6 @@ import {
   type User,
 } from "../../database/types.js";
 import { SQL } from "sql-template-strings";
-import { promises } from "node:dns";
 
 const grantAccess = async (
   db: PoolConnection,
@@ -42,14 +41,15 @@ const grantAccess = async (
 
 const getPresentationAccess = async (
   db: PoolConnection,
-  presentaionId: UUID,
+  presentationId: UUID,
 ): Promise<User[]> => {
-  //agent :review qeury
-  const query = SQL`select u.user_id u.username u.email from edit_access edit
-  join user u on edit.user_id = u.id
-  where presentation_id=${presentaionId} and  expires_at>${new Date()}`;
+  const query = SQL`select u.id, u.username, u.email
+  from edit_access ea
+  join users u on ea.user_id = u.id
+  where ea.presentation_id=${presentationId}
+    and (ea.expires_at is null or ea.expires_at > now())`;
   const [rows] = await db.query(query);
-  return rows.map((row) => serializeUser(row.u));
+  return (rows as any[]).map((row) => serializeUser(row));
 };
 
 export const accessService = {

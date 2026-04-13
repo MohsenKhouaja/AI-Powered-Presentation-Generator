@@ -12,7 +12,6 @@ export type User = {
   readonly id: UUID;
   readonly username: string;
   readonly email: string;
-  readonly password: string;
 };
 export type userInsert = User;
 
@@ -46,6 +45,7 @@ export type Context = {
   presentationId: UUID;
 };
 export type contextInsert = Context;
+export type contextUpdate = Omit<contextInsert, "presentationId">;
 
 export type File = {
   id: UUID;
@@ -67,16 +67,14 @@ export type editAccessInsert = EditAccess;
 
 export const serializeUser = (row: any): User => ({
   id: row.id ?? row.user_id,
-  username: row.username ?? row.user_name,
+  username: row.username,
   email: row.email,
-  password: row.password,
 });
 
 export const serializeUserInsert = (row: userInsert | any): userInsert => ({
   id: row.id ?? row.user_id,
   username: row.username ?? row.user_name,
   email: row.email,
-  password: row.password,
 });
 
 export const serializePresentation = (
