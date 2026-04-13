@@ -41,19 +41,13 @@ try {
   const mysqlErr = err as mysql2.QueryError;
 }
 
-import mysql from "mysql2/promise";
-import { promises } from "dns";
-
 export async function runTransaction<T, Args extends unknown[]>(
   db: Pool,
   func: (db: PoolConnection, ...props: Args) => Promise<T>,
   ...props: Args
 ): Promise<T> {
-  const connection: PoolConnection = await pool.getConnection();
+  const connection: PoolConnection = await db.getConnection();
   try {
-    await connection.execute(
-      "SET SESSION TRANSACTION ISOLATION LEVEL SERIALIZABLE",
-    );
     await connection.beginTransaction();
     const result: T = await func(connection, ...props);
     await connection.commit();
