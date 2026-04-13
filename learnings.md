@@ -14,7 +14,7 @@ type IsolationLevel = "READ COMMITTED" | "REPEATABLE READ" | "SERIALIZABLE";
 
 export async function runTransaction<T, Args extends unknown[]>(
   db: Pool,
-  func: (db: PoolConnection, ...props: Args) => Promise<T>,
+  func: (db: PoolConnection | Pool, ...props: Args) => Promise<T>,
   props: Args,
   isolationLevel: IsolationLevel = "REPEATABLE READ",
 ): Promise<T> {

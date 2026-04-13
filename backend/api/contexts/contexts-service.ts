@@ -17,7 +17,7 @@ const createTransaction = async (
 };
 
 const create = async (
-  db: PoolConnection,
+  db: PoolConnection | Pool,
   context: contextInsert,
   files: fileInsert[],
 ): Promise<void> => {
@@ -39,7 +39,7 @@ const updateTransaction = async (
   runTransaction(db, update, prompt, newFiles, deletedFilesIds);
 };
 const update = async (
-  db: PoolConnection,
+  db: PoolConnection | Pool,
   contextUpdate: contextUpdate,
   newFiles: fileInsert[],
   deletedFilesIds: UUID[],
