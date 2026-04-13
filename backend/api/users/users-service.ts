@@ -1,7 +1,7 @@
 import { randomBytes, randomUUID, scrypt as scryptCallback } from "node:crypto";
 import { promisify } from "node:util";
 import { SQL } from "sql-template-strings";
-import type { PoolConnection } from "mysql2/promise";
+import type { PoolConnection, Pool } from "mysql2/promise";
 import type { User, userInsert } from "../../database/types.js";
 import { serializeUser } from "../../database/types.js";
 
@@ -18,7 +18,10 @@ const hashPassword = async (password: string): Promise<string> => {
   return `scrypt$${salt}$${derivedKey.toString("hex")}`;
 };
 
-const signup = async (db: PoolConnection, user: userInsert): Promise<User> => {
+const signup = async (
+  db: PoolConnection | Pool,
+  user: userInsert,
+): Promise<User> => {
   const [existingRows] = await db.query(
     SQL`select id from users where email = ${user.email} or username = ${user.username} limit 1`,
   );

@@ -1,4 +1,4 @@
-import type { PoolConnection } from "mysql2/promise";
+import type { PoolConnection, Pool } from "mysql2/promise";
 import { randomUUID, UUID } from "node:crypto";
 import {
   editAccessInsert,
@@ -9,7 +9,7 @@ import {
 import { SQL } from "sql-template-strings";
 
 const grantAccess = async (
-  db: PoolConnection,
+  db: PoolConnection | Pool,
   userId: UUID,
   editAccessInsert: editAccessInsert,
 ) => {
@@ -40,7 +40,7 @@ const grantAccess = async (
 };
 
 const getPresentationAccess = async (
-  db: PoolConnection,
+  db: PoolConnection | Pool,
   presentationId: UUID,
 ): Promise<User[]> => {
   const query = SQL`select u.id, u.username, u.email

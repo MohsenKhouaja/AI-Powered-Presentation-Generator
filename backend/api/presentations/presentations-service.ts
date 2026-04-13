@@ -1,6 +1,6 @@
 import { randomUUID, UUID } from "node:crypto";
 import { SQL } from "sql-template-strings";
-import type { PoolConnection } from "mysql2/promise";
+import type { PoolConnection, Pool } from "mysql2/promise";
 import type {
   Presentation,
   presentationInsert,
@@ -14,7 +14,7 @@ import {
 } from "../../database/types.js";
 
 const findMany = async (
-  db: PoolConnection,
+  db: PoolConnection | Pool,
   userId: UUID,
 ): Promise<Presentation[]> => {
   const [ownedPresentationRows] = await db.query(
@@ -67,7 +67,10 @@ type PresentationDetail = {
   AccessType: "edit" | "own";
 };
 
-const findOneDetailed = async (db: PoolConnection, presentationId: UUID) => {
+const findOneDetailed = async (
+  db: PoolConnection | Pool,
+  presentationId: UUID,
+) => {
   const [rows] = await db.query({
     sql: `select p.id , p.title , p.user_id, p.created_at,  c.id, c.prompt
   from  presentations p 
@@ -79,13 +82,16 @@ const findOneDetailed = async (db: PoolConnection, presentationId: UUID) => {
   //get slides
 };
 
-const create = async (db: PoolConnection, presentation: presentationInsert) => {
+const create = async (
+  db: PoolConnection | Pool,
+  presentation: presentationInsert,
+) => {
   const query = SQL`insert into presentations (id,title,user_id) values (${randomUUID()},${presentation.title},${presentation.userId})`;
   await db.query(query);
 };
 
 const remove = async (
-  db: PoolConnection,
+  db: PoolConnection | Pool,
   userId: UUID,
   presentationId: UUID,
 ) => {
@@ -103,7 +109,7 @@ const remove = async (
 };
 
 const grantAccess = async (
-  db: PoolConnection,
+  db: PoolConnection | Pool,
   userId: UUID,
   editAccessInsert: editAccessInsert,
 ) => {
