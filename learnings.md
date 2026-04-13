@@ -3,10 +3,12 @@
 ## Transactions: isolation level and rollback errors
 
 ### Notes
+
 - Look more into transaction isolation levels.
 - Look more into rollback error handling.
 
 ### Isolation level idea (draft)
+
 ```ts
 type IsolationLevel = "READ COMMITTED" | "REPEATABLE READ" | "SERIALIZABLE";
 
@@ -38,5 +40,6 @@ export async function runTransaction<T, Args extends unknown[]>(
 ```
 
 ### Caution
+
 The rollback path should not hide the original error.
 If `rollback()` throws, the original failure can be lost, which makes production debugging harder.
