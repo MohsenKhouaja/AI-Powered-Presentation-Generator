@@ -13,7 +13,7 @@ export type User = {
   readonly username: string;
   readonly email: string;
 };
-export type userInsert = User;
+export type userInsert = User & { readonly password: string };
 
 export type AccessType = "edit" | "own";
 
@@ -71,11 +71,7 @@ export const serializeUser = (row: any): User => ({
   email: row.email,
 });
 
-export const serializeUserInsert = (row: userInsert | any): userInsert => ({
-  id: row.id ?? row.user_id,
-  username: row.username ?? row.user_name,
-  email: row.email,
-});
+
 
 export const serializePresentation = (
   row: any,
