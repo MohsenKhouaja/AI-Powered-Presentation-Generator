@@ -43,7 +43,7 @@ try {
 
 export async function runTransaction<T, Args extends unknown[]>(
   db: Pool,
-  func: (db: PoolConnection, ...props: Args) => Promise<T>,
+  func: (db: PoolConnection | Pool, ...props: Args) => Promise<T>,
   ...props: Args
 ): Promise<T> {
   const connection: PoolConnection = await db.getConnection();
