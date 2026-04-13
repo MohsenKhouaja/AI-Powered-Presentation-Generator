@@ -83,6 +83,7 @@ const create = async (db: PoolConnection, presentation: presentationInsert) => {
   const query = SQL`insert into presentations (id,title,user_id) values (${randomUUID()},${presentation.title},${presentation.userId})`;
   await db.query(query);
 };
+
 const remove = async (
   db: PoolConnection,
   userId: UUID,
@@ -100,6 +101,7 @@ const remove = async (
   }
   await db.query(SQL`delete from presentations where id=${presentationId}`);
 };
+
 const grantAccess = async (
   db: PoolConnection,
   userId: UUID,
