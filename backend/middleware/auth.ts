@@ -13,6 +13,10 @@ function authMiddleware(req, res, next) {
       token,
       process.env.JWT_ACCESS_TOKEN_SECRET_KEY,
     );
+    if (!payload || typeof payload !== "object" || !("sub" in payload)) {
+      return res.status(401).json({ message: "Unauthorized, invalid token" });
+    }
+    req.authenticatedUserId = payload.sub;
     next();
   } catch (error) {
     const message =
