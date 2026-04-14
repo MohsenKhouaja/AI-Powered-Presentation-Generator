@@ -3,7 +3,6 @@ import { promisify } from "node:util";
 import { SQL } from "sql-template-strings";
 import type { PoolConnection, Pool } from "mysql2/promise";
 import type { User, userInsert } from "../../database/types.js";
-import { serializeUser } from "../../database/types.js";
 
 const scrypt = promisify(scryptCallback);
 
@@ -36,17 +35,11 @@ const signup = async (
     SQL`insert into users (id, username, email, password) values (${userId}, ${user.username}, ${user.email}, ${hashedPassword})`,
   );
 
-  const [createdRows] = await db.query(
-    SQL`select id, username, email, password from users where id = ${userId} limit 1`,
-  );
-
-  const createdRow = Array.isArray(createdRows) ? createdRows[0] : null;
-
-  if (!createdRow) {
-    throw new Error("Failed to create user");
-  }
-
-  return serializeUser(createdRow);
+  return {
+    id: userId,
+    username: user.username,
+    email: user.email,
+  };
 };
 
 export const usersService = {

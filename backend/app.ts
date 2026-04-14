@@ -1,9 +1,13 @@
-import express from "express";
+import express, {
+  type NextFunction,
+  type Request,
+  type Response,
+} from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import routes from "./routes/index.js";
 import authMiddleware from "./middleware/auth.js";
 import cookieParser from "cookie-parser";
+import { apiRouter } from "./api/router.js";
 
 dotenv.config();
 
@@ -33,7 +37,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(authMiddleware);
 
 // Routes
-app.use("/api", routes);
+app.use("/api", apiRouter);
 
 // Health check
 app.get("/health", (req, res) => {
@@ -41,11 +45,34 @@ app.get("/health", (req, res) => {
 });
 
 // Error handler
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(err.status || 500).json({
-    error: err.message || "Internal server error",
-  });
+app.use((err: any | Error, req: Request, res: Response, next: NextFunction) => {
+  console.error("Unhandled error:", err);
+  if (err instanceof Error && err.stack) {
+    console.error(err.stack);
+  }
+
+  const status =
+    typeof (err as { status?: unknown })?.status === "number"
+      ? (err as { status: number }).status
+      : typeof (err as { statusCode?: unknown })?.statusCode === "number"
+        ? (err as { statusCode: number }).statusCode
+        : 500;
+
+  const errorMessage =
+    err instanceof Error && err.message
+      ? err.message
+      : typeof (err as { message?: unknown })?.message === "string"
+        ? (err as { message: string }).message
+        : "An unexpected error occurred";
+
+  const safeMessage =
+    status === 500
+      ? process.env.NODE_ENV !== "production"
+        ? errorMessage
+        : "Internal server error"
+      : errorMessage;
+
+  res.status(status).json({ error: safeMessage });
 });
 
 // 404 handler

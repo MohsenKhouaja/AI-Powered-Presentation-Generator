@@ -2,7 +2,7 @@ import express from "express";
 import jsonwebtoken from "jsonwebtoken";
 import dotenv from "dotenv";
 dotenv.config();
-const authRouter = express.Router();
+export const authRouter = express.Router();
 /* interface JwtPayload {
   sub: string;
   iat: number;

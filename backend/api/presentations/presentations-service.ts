@@ -69,6 +69,7 @@ type PresentationDetail = {
 
 const findOneDetailed = async (
   db: PoolConnection | Pool,
+  userID: UUID,
   presentationId: UUID,
 ) => {
   const [rows] = await db.query({
@@ -85,9 +86,18 @@ const findOneDetailed = async (
 const create = async (
   db: PoolConnection | Pool,
   presentation: presentationInsert,
-) => {
-  const query = SQL`insert into presentations (id,title,user_id) values (${randomUUID()},${presentation.title},${presentation.userId})`;
+): Promise<Presentation> => {
+  const presentationId = randomUUID();
+  const createdAt = new Date();
+  const query = SQL`insert into presentations (id,title,user_id,created_at) values (${presentationId},${presentation.title},${presentation.userId},${createdAt})`;
   await db.query(query);
+  return {
+    id: presentationId,
+    title: presentation.title,
+    userId: presentation.userId,
+    createdAt,
+    AccessType: "own",
+  };
 };
 
 const remove = async (
