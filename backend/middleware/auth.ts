@@ -11,11 +11,15 @@ function authMiddleware(req, res, next) {
     const token = authHeader.split(" ")[1];
     const payload = jsonwebtoken.verify(
       token,
-      process.env.JWT_ACCESS_TOKEN_SECRET_KEY
+      process.env.JWT_ACCESS_TOKEN_SECRET_KEY,
     );
     next();
   } catch (error) {
-    res.status(401).send("unauthorized, token expired");
+    const message =
+      error instanceof jsonwebtoken.TokenExpiredError
+        ? "Unauthorized, token expired"
+        : "Unauthorized, invalid token";
+    return res.status(401).json({ message });
   }
 }
 

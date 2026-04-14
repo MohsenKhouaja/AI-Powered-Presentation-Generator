@@ -1,6 +1,7 @@
 import type { PoolConnection, Pool } from "mysql2/promise";
 import { randomUUID, UUID } from "node:crypto";
 import {
+  EditAccess,
   editAccessInsert,
   serializePresentation,
   serializeUser,
@@ -12,7 +13,7 @@ const grantAccess = async (
   db: PoolConnection | Pool,
   userId: UUID,
   editAccessInsert: editAccessInsert,
-) => {
+): Promise<EditAccess> => {
   // ntale3 el user id mel mail
   const [userIds] = await db.query(
     SQL`select id from users where email=${editAccessInsert.email}`,
@@ -35,8 +36,16 @@ const grantAccess = async (
   if (!userOwnsPresentation) {
     throw new Error("user unauthorized to grand access");
   }
-  const query = SQL`insert into edit_access (id,user_id,presentation_id,expires_at) values (${randomUUID()},${userIdFromEmail},${editAccessInsert.presentationId},${editAccessInsert.expiresAt || null})`;
+  const editAccessId = randomUUID();
+  const query = SQL`insert into edit_access (id,user_id,presentation_id,expires_at) values (${editAccessId},${userIdFromEmail},${editAccessInsert.presentationId},${editAccessInsert.expiresAt || null})`;
   await db.query(query);
+
+  return {
+    id: editAccessId,
+    email: editAccessInsert.email,
+    presentationId: editAccessInsert.presentationId,
+    expiresAt: editAccessInsert.expiresAt,
+  };
 };
 
 const getPresentationAccess = async (

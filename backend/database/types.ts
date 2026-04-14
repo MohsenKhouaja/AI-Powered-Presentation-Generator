@@ -13,7 +13,7 @@ export type User = {
   readonly username: string;
   readonly email: string;
 };
-export type userInsert = User & { readonly password: string };
+export type userInsert = Omit<User, "id"> & { readonly password: string };
 
 export type AccessType = "edit" | "own";
 
@@ -24,7 +24,10 @@ export type Presentation = {
   readonly createdAt: Date;
   AccessType: AccessType | null;
 };
-export type presentationInsert = Omit<Presentation, "createdAt">;
+export type presentationInsert = Omit<
+  Presentation,
+  "id" | "createdAt" | "AccessType"
+>;
 
 export type PresentationDetail = Presentation & {
   slides: Slide[];
@@ -44,8 +47,8 @@ export type Context = {
   prompt: string;
   presentationId: UUID;
 };
-export type contextInsert = Context;
-export type contextUpdate = Omit<contextInsert, "presentationId">;
+export type contextInsert = Omit<Context, "id">;
+export type contextUpdate = Pick<Context, "id" | "prompt">;
 
 export type File = {
   id: UUID;
@@ -55,7 +58,7 @@ export type File = {
   fileType: string;
   sizeBytes: number;
 };
-export type fileInsert = File;
+export type fileInsert = Omit<File, "id">;
 
 export type EditAccess = {
   id: UUID;
@@ -63,15 +66,13 @@ export type EditAccess = {
   presentationId: UUID;
   expiresAt: Date;
 };
-export type editAccessInsert = EditAccess;
+export type editAccessInsert = Omit<EditAccess, "id">;
 
 export const serializeUser = (row: any): User => ({
   id: row.id ?? row.user_id,
   username: row.username,
   email: row.email,
 });
-
-
 
 export const serializePresentation = (
   row: any,
