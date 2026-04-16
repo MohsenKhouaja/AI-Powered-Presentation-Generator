@@ -36,7 +36,7 @@ const create = async (
   files: fileInsert[],
 ): Promise<ContextCreateResult> => {
   const contextId = randomUUID();
-  const query = SQL`insert into contexts (id, prompt, presentation_id) values (${contextId}, ${context.prompt}, ${context.presentationId})`;
+  const query = SQL`insert into contexts (id, prompt) values (${contextId}, ${context.prompt})`;
   await db.query(query);
   const createdFiles = files.map((file) => ({
     ...file,
@@ -50,7 +50,6 @@ const create = async (
     context: {
       id: contextId,
       prompt: context.prompt,
-      presentationId: context.presentationId,
     },
     files: createdFileRows,
   };
@@ -62,8 +61,6 @@ const updateTransaction = async (
   newFiles: fileInsert[],
   deletedFilesIds: UUID[],
 ): Promise<ContextUpdateResult> => {
-  // lezmni n8zer lel files el jdod nzidhom w el na9sin ne7ihom
-  // createMany(db,newFiles)
   return runTransaction(db, update, prompt, newFiles, deletedFilesIds);
 };
 const update = async (

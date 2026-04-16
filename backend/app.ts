@@ -3,6 +3,8 @@ import express, {
   type Request,
   type Response,
 } from "express";
+import { mkdirSync } from "node:fs";
+import path from "node:path";
 import cors from "cors";
 import dotenv from "dotenv";
 import authMiddleware from "./middleware/auth.js";
@@ -10,6 +12,13 @@ import cookieParser from "cookie-parser";
 import { apiRouter } from "./api/router.js";
 
 dotenv.config();
+
+export const UPLOAD_PATH = path.resolve(
+  process.cwd(),
+  process.env.UPLOAD_PATH?.trim() || "uploads",
+);
+
+mkdirSync(UPLOAD_PATH, { recursive: true });
 
 const app = express();
 const PORT = process.env.PORT || 3001;
