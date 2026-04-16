@@ -26,7 +26,9 @@ CREATE TABLE IF NOT EXISTS presentations (
     id VARCHAR(255) PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
     user_id VARCHAR(255) NOT NULL,
+    context_id VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (context_id) REFERENCES contexts (id) ON DELETE SET NULL,
     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
@@ -41,10 +43,8 @@ CREATE TABLE IF NOT EXISTS slides (
 CREATE TABLE IF NOT EXISTS contexts (
     id VARCHAR(255) PRIMARY KEY,
     prompt TEXT DEFAULT '',
-    presentation_id VARCHAR(255) NOT NULL,
-    FOREIGN KEY (presentation_id) REFERENCES presentations (id) ON DELETE CASCADE,
-    CONSTRAINT uq_presentation UNIQUE (presentation_id)
 );
+
 CREATE TABLE IF NOT EXISTS files (
     id VARCHAR(255) PRIMARY KEY,
     context_id VARCHAR(255) NOT NULL,

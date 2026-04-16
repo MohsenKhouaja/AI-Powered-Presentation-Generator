@@ -93,6 +93,7 @@ const create = async (
   await db.query(query);
   return {
     id: presentationId,
+    contextId: presentation.contextId,
     title: presentation.title,
     userId: presentation.userId,
     createdAt,

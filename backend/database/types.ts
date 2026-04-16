@@ -21,6 +21,7 @@ export type Presentation = {
   readonly id: string;
   title: string;
   readonly userId: UUID;
+  readonly contextId?: UUID;
   readonly createdAt: Date;
   AccessType: AccessType | null;
 };
@@ -45,7 +46,6 @@ export type slideInsert = Slide;
 export type Context = {
   id: UUID;
   prompt: string;
-  presentationId: UUID;
 };
 export type contextInsert = Omit<Context, "id">;
 export type contextUpdate = Pick<Context, "id" | "prompt">;
@@ -57,8 +57,9 @@ export type File = {
   mimeType: string;
   fileType: string;
   sizeBytes: number;
+  originalname: string;
 };
-export type fileInsert = Omit<File, "id">;
+export type fileInsert = File;
 
 export type EditAccess = {
   id: UUID;
@@ -83,6 +84,7 @@ export const serializePresentation = (
   createdAt: toDate(row.createdAt ?? row.created_at),
   userId: row.userId ?? row.user_id,
   AccessType: accessType,
+  contextId: row.contextId ?? row.context_id,
 });
 
 export const serializeSlide = (row: any, content: string): Slide => ({
@@ -95,7 +97,6 @@ export const serializeSlide = (row: any, content: string): Slide => ({
 export const serializeContext = (row: any): Context => ({
   id: row.id ?? row.context_id,
   prompt: row.prompt,
-  presentationId: row.presentationId ?? row.presentation_id,
 });
 
 export const serializeFile = (row: any): File => ({
@@ -105,6 +106,7 @@ export const serializeFile = (row: any): File => ({
   mimeType: row.mimeType ?? row.mime_type,
   fileType: row.fileType ?? row.file_type,
   sizeBytes: row.sizeBytes ?? row.size_bytes,
+  originalname: row.originalname ?? row.original_name,
 });
 
 export const serializePresentationDetail = (row: any): PresentationDetail => ({
@@ -113,6 +115,7 @@ export const serializePresentationDetail = (row: any): PresentationDetail => ({
   createdAt: toDate(row.createdAt ?? row.created_at),
   userId: row.userId ?? row.user_id,
   slides: row.slides ?? [],
+  contextId: row.contextId ?? row.context_id,
   context: row.context ?? row.presentation_context ?? null,
   AccessType: (row.AccessType ??
     row.accessType ??
