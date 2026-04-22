@@ -12,9 +12,20 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/context/AuthContext";
 import { useState } from "react";
+import { parseAuthCredentialsInput } from "@/lib/dto/auth";
+import {
+  useLoginMutation,
+  useRegisterMutation,
+} from "@/hooks/queries/useAuthSession";
 export function AuthForm() {
-  const { setEmail, isLoading, login, register } = useAuth();
+  const { setEmail } = useAuth();
   const [mode, setMode] = useState<"login" | "signup">("login");
+  const [formError, setFormError] = useState<string | null>(null);
+  const loginMutation = useLoginMutation();
+  const registerMutation = useRegisterMutation();
+  const activeMutation = mode === "login" ? loginMutation : registerMutation;
+  const mutationError = activeMutation.error;
+  const pending = activeMutation.isPending;
   const changeMode = () => {
     if (mode === "login") {
       setMode("signup");
@@ -25,13 +36,30 @@ export function AuthForm() {
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const email = formData.get("email") as string;
-    const password = formData.get("password") as string;
+    const credentials = {
+      email: String(formData.get("email") ?? ""),
+      password: String(formData.get("password") ?? ""),
+    };
+
+    const parsedCredentials = parseAuthCredentialsInput(credentials);
+    if (!parsedCredentials.success) {
+      setFormError(
+        parsedCredentials.error.issues[0]?.message ?? "Invalid form",
+      );
+      return;
+    }
+
+    setFormError(null);
+    const { email, password } = parsedCredentials.data;
     setEmail(email);
     if (mode === "login") {
-      await login(email, password);
+      await loginMutation
+        .mutateAsync({ email, password })
+        .catch(() => undefined);
     } else {
-      await register(email, password);
+      await registerMutation
+        .mutateAsync({ email, password })
+        .catch(() => undefined);
     }
   };
   return (
@@ -100,12 +128,24 @@ export function AuthForm() {
                 </div>
               </CardContent>
               <CardFooter className="mt-auto pt-6">
-                <Button
-                  className="w-full h-11 text-[clamp(14px,base,20px)] font-semibold transition-all active:scale-[0.98]"
-                  disabled={isLoading}
-                >
-                  {isLoading ? "Signing in..." : "Sign In"}
-                </Button>
+                <div className="w-full space-y-2">
+                  {formError ? (
+                    <p className="text-sm text-destructive">{formError}</p>
+                  ) : null}
+                  {mutationError && !formError ? (
+                    <p className="text-sm text-destructive">
+                      {mutationError instanceof Error
+                        ? mutationError.message
+                        : "Unable to sign in"}
+                    </p>
+                  ) : null}
+                  <Button
+                    className="w-full h-11 text-[clamp(14px,base,20px)] font-semibold transition-all active:scale-[0.98]"
+                    disabled={pending}
+                  >
+                    {pending ? "Signing in..." : "Sign In"}
+                  </Button>
+                </div>
               </CardFooter>
             </form>
           </Card>
@@ -155,12 +195,24 @@ export function AuthForm() {
                 </div>
               </CardContent>
               <CardFooter className="mt-auto pt-6">
-                <Button
-                  className="w-full h-11 text-[clamp(14px,base,20px)] font-semibold transition-all active:scale-[0.98]"
-                  disabled={isLoading}
-                >
-                  {isLoading ? "Creating account..." : "Create Account"}
-                </Button>
+                <div className="w-full space-y-2">
+                  {formError ? (
+                    <p className="text-sm text-destructive">{formError}</p>
+                  ) : null}
+                  {mutationError && !formError ? (
+                    <p className="text-sm text-destructive">
+                      {mutationError instanceof Error
+                        ? mutationError.message
+                        : "Unable to create account"}
+                    </p>
+                  ) : null}
+                  <Button
+                    className="w-full h-11 text-[clamp(14px,base,20px)] font-semibold transition-all active:scale-[0.98]"
+                    disabled={pending}
+                  >
+                    {pending ? "Creating account..." : "Create Account"}
+                  </Button>
+                </div>
               </CardFooter>
             </form>
           </Card>

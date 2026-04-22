@@ -11,7 +11,7 @@ export type AuthContextValue = {
   fetchwithauth: (
     path: string,
     method: HttpMethod,
-    options?: object,
+    options?: RequestInit,
   ) => Promise<Response>;
 };
 
