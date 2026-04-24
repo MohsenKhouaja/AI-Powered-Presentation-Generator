@@ -1,4 +1,9 @@
 {
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
   "devDependencies": {
     "husky": "^9.1.7"
   },

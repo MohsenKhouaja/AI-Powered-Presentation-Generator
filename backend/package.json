@@ -4,6 +4,7 @@
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
+    "drizzle-orm": "^0.45.2",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.1.1",
@@ -13,10 +14,16 @@
   },
   "type": "module",
   "scripts": {
-    "dev": "node app.js",
-    "test:db": "node database/index.js"
+    "dev": "tsx app.ts",
+    "build": "tsc -p tsconfig.json",
+    "test:db": "tsx database/index.ts",
+    "db:generate": "drizzle-kit generate --config=drizzle.config.ts",
+    "db:migrate": "drizzle-kit migrate --config=drizzle.config.ts",
+    "db:studio": "drizzle-kit studio --config=drizzle.config.ts"
   },
   "devDependencies": {
-    "@types/node": "^25.1.0"
+    "@types/node": "^25.1.0",
+    "drizzle-kit": "^0.31.10",
+    "tsx": "^4.20.6"
   }
 }
