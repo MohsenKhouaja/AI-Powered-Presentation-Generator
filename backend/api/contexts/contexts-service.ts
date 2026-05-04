@@ -1,5 +1,5 @@
-import { randomUUID, UUID } from "node:crypto";
-import { SQL } from "sql-template-strings";
+import { randomUUID } from "node:crypto";
+import type { UUID } from "node:crypto";
 import type {
   Context,
   File,
@@ -7,14 +7,10 @@ import type {
   contextUpdate,
   fileInsert,
 } from "../../database/types.js";
-import type { Pool, PoolConnection } from "mysql2/promise";
 import { fileService } from "../files/files-service.js";
-import { runTransaction } from "../../database/index.js";
-
-type ContextCreateResult = {
-  context: Context;
-  files: File[];
-};
+import type { DBContext } from "../../database/index.js";
+import { contexts } from "../../database/drizzle/schema.js";
+import { eq } from "drizzle-orm";
 
 type ContextUpdateResult = {
   context: contextUpdate;
@@ -22,72 +18,78 @@ type ContextUpdateResult = {
   deletedFilesIds: UUID[];
 };
 
-const createTransaction = async (
-  db: Pool,
-  context: contextInsert,
-  files: fileInsert[],
-): Promise<ContextCreateResult> => {
-  return runTransaction(db, create, context, files);
+const findOne = async (
+  db: DBContext,
+  contextId: UUID,
+): Promise<Context | null> => {
+  const contextRow = await db.query.contexts.findFirst({
+    where: eq(contexts.id, contextId),
+    with: {
+      files: true,
+    },
+  });
+  if (!contextRow) {
+    return null;
+  }
 };
 
 const create = async (
-  db: PoolConnection | Pool,
+  db: DBContext,
   context: contextInsert,
   files: fileInsert[],
-): Promise<ContextCreateResult> => {
+): Promise<Context> => {
   const contextId = randomUUID();
-  const query = SQL`insert into contexts (id, prompt) values (${contextId}, ${context.prompt})`;
-  await db.query(query);
-  const createdFiles = files.map((file) => ({
-    ...file,
-    contextId,
-  }));
-  const createdFileRows =
-    createdFiles.length > 0
-      ? await fileService.createMany(db, createdFiles)
-      : [];
-  return {
-    context: {
+  return await db.transaction(async (tx) => {
+    await tx.insert(contexts).values({
       id: contextId,
       prompt: context.prompt,
-    },
-    files: createdFileRows,
-  };
+    });
+    const createdFiles = files.map((file) => ({
+      ...file,
+      contextId,
+    }));
+    const createdFileRows =
+      createdFiles.length > 0
+        ? await fileService.createMany(tx, createdFiles)
+        : [];
+    return {
+      id: contextId,
+      prompt: context.prompt,
+      presentationId: null,
+      files: createdFileRows,
+    };
+  });
 };
 
-const updateTransaction = async (
-  db: Pool,
-  prompt: contextUpdate,
-  newFiles: fileInsert[],
-  deletedFilesIds: UUID[],
-): Promise<ContextUpdateResult> => {
-  return runTransaction(db, update, prompt, newFiles, deletedFilesIds);
-};
 const update = async (
-  db: PoolConnection | Pool,
+  db: DBContext,
   contextUpdate: contextUpdate,
   newFiles: fileInsert[],
   deletedFilesIds: UUID[],
 ): Promise<ContextUpdateResult> => {
-  const query = SQL`update contexts set prompt=${contextUpdate.prompt} where id=${contextUpdate.id}`;
-  await db.query(query);
-  const createdFiles = newFiles.map((file) => ({
-    ...file,
-    contextId: contextUpdate.id,
-  }));
-  const createdFileRows =
-    createdFiles.length > 0
-      ? await fileService.createMany(db, createdFiles)
-      : [];
-  await fileService.deleteMany(db, deletedFilesIds);
-  return {
-    context: contextUpdate,
-    newFiles: createdFileRows,
-    deletedFilesIds,
-  };
+  return await db.transaction(async (tx) => {
+    await tx
+      .update(contexts)
+      .set({ prompt: contextUpdate.prompt })
+      .where(eq(contexts.id, contextUpdate.id));
+    const createdFiles = newFiles.map((file) => ({
+      ...file,
+      contextId: contextUpdate.id,
+    }));
+    const createdFileRows =
+      createdFiles.length > 0
+        ? await fileService.createMany(tx, createdFiles)
+        : [];
+    await fileService.deleteMany(tx, deletedFilesIds);
+    return {
+      context: contextUpdate,
+      newFiles: createdFileRows,
+      deletedFilesIds,
+    };
+  });
 };
 
 export const contextService = {
-  create: createTransaction,
-  update: updateTransaction,
+  create,
+  update,
 };
