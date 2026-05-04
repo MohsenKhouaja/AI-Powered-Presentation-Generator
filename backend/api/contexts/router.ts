@@ -5,7 +5,6 @@ import path from "node:path";
 import multer from "multer";
 import { UPLOAD_PATH } from "../../config/uploads.js";
 import { randomUUID } from "node:crypto";
-import type { Express } from "express";
 import type { UUID } from "node:crypto";
 import type { fileInsert } from "../../database/types.js";
 
@@ -14,7 +13,8 @@ const upload = multer({
   storage: multer.diskStorage({
     destination: UPLOAD_PATH,
     filename: (_req, file, callback) => {
-      callback(null, `${randomUUID()}-${path.extname(file.originalname)}`);
+      const ext = path.extname(file.originalname).toLowerCase();
+      callback(null, `${randomUUID()}${ext}`);
     },
   }),
   limits: {
@@ -46,7 +46,10 @@ contextsRouter.post(
   async (req, res) => {
     const contextId = randomUUID();
     const prompt = req.body?.prompt ?? "";
-    const newFiles = serializeFilesForInsert(req.files ?? [], contextId);
+    const newFiles = serializeFilesForInsert(
+      (req.files ?? []) as Express.Multer.File[],
+      contextId,
+    );
     const createdContext = await contextService.create(db, prompt, newFiles);
     res.status(201).json(createdContext);
   },
@@ -56,12 +59,15 @@ contextsRouter.put(
   "/contexts/:id",
   upload.array("files", 50),
   async (req, res) => {
-    const contextId = req.params.id;
-    const prompt = req.body?.prompt ?? "";
+    const contextId = req.params.id as string;
+    const prompt = (req.body?.prompt ?? "") as string;
     const deletedFilesIds = Array.isArray(req.body?.deletedFilesIds)
       ? req.body.deletedFilesIds
       : [];
-    const newFiles = serializeFilesForInsert(req.files ?? [], contextId);
+    const newFiles = serializeFilesForInsert(
+      (req.files ?? []) as Express.Multer.File[],
+      contextId,
+    );
     const updatedContext = await contextService.update(
       db,
       {
