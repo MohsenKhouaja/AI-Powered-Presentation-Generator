@@ -1,8 +1,9 @@
 import * as crypto from "node:crypto";
 import { promisify } from "node:util";
-import { SQL } from "sql-template-strings";
-import type { PoolConnection, Pool } from "mysql2/promise";
 import type { User, userInsert } from "../../database/types.js";
+import type { DBContext } from "../../database/index.js";
+import { users } from "../../database/drizzle/schema.js";
+import { eq, or } from "drizzle-orm";
 
 const scrypt = promisify(crypto.scrypt);
 
@@ -44,23 +45,25 @@ const verifyPassword = async (
   return crypto.timingSafeEqual(derivedKey, storedKey);
 };
 
-const signup = async (
-  db: PoolConnection | Pool,
-  user: userInsert,
-): Promise<User> => {
-  const [existingRows] = await db.query(
-    SQL`select id from users where email = ${user.email} or username = ${user.username} limit 1`,
-  );
+const signup = async (db: DBContext, user: userInsert): Promise<User> => {
+  const existingRows = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(or(eq(users.email, user.email), eq(users.username, user.username)))
+    .limit(1);
 
-  if (Array.isArray(existingRows) && existingRows.length > 0) {
+  if (existingRows.length > 0) {
     throw new Error("User with this email or username already exists");
   }
 
   const userId = crypto.randomUUID();
   const hashedPassword = await hashPassword(user.password);
-  await db.query(
-    SQL`insert into users (id, username, email, password) values (${userId}, ${user.username}, ${user.email}, ${hashedPassword})`,
-  );
+  await db.insert(users).values({
+    id: userId,
+    username: user.username,
+    email: user.email,
+    password: hashedPassword,
+  });
 
   return {
     id: userId,
@@ -70,7 +73,7 @@ const signup = async (
 };
 
 const login = async (
-  db: PoolConnection | Pool,
+  db: DBContext,
   email: string,
   password: string,
 ): Promise<User> => {
@@ -82,11 +85,18 @@ const login = async (
     throw new Error("Password is required");
   }
 
-  const [rows] = await db.query(
-    SQL`select id, username, email, password from users where email = ${email} limit 1`,
-  );
+  const rows = await db
+    .select({
+      id: users.id,
+      username: users.username,
+      email: users.email,
+      password: users.password,
+    })
+    .from(users)
+    .where(eq(users.email, email))
+    .limit(1);
 
-  if (!Array.isArray(rows) || rows.length === 0) {
+  if (rows.length === 0) {
     throw new Error("Invalid email or password");
   }
 

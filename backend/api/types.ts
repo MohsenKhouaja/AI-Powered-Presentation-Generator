@@ -3,6 +3,7 @@ import { fileService } from "./files/files-service.js";
 import { presentationsService } from "./presentations/presentations-service.js";
 import { accessService } from "./presentations_access/presentations_access-service.js";
 import { usersService } from "./users/users-service.js";
+import type { File, fileInsert } from "../database/types.js";
 
 type ServiceInput<T extends (...args: any[]) => unknown> = T extends (
   db: unknown,
@@ -14,8 +15,12 @@ type ServiceInput<T extends (...args: any[]) => unknown> = T extends (
 type ServiceOutput<T extends (...args: any[]) => unknown> = Awaited<
   ReturnType<T>
 >;
- 
 
+export type SharedPresentationReference = SharedPresentationRef;
+
+type AssertExtends<Source, Target extends Source> = true;
+type _SharedFileSelectCompatible = AssertExtends<SharedFile, File>;
+type _SharedFileInsertCompatible = AssertExtends<SharedFileInsert, fileInsert>;
 
 export const types = {
   usersService: {

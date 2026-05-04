@@ -1,4 +1,14 @@
-import { UUID } from "node:crypto";
+import type { UUID } from "node:crypto";
+import type {
+  ContextRow,
+  FileRow,
+  NewContextRow,
+  NewFileRow,
+  NewSlideRow,
+  NewUserRow,
+  SlideRow,
+  UserRow,
+} from "./drizzle/schema.js";
 
 const toDate = (value: unknown): Date => {
   if (value instanceof Date) {
@@ -8,12 +18,8 @@ const toDate = (value: unknown): Date => {
   return new Date(value as string | number);
 };
 
-export type User = {
-  readonly id: UUID;
-  readonly username: string;
-  readonly email: string;
-};
-export type userInsert = Omit<User, "id"> & { readonly password: string };
+export type User = Pick<UserRow, "id" | "username" | "email">;
+export type userInsert = Omit<NewUserRow, "id">;
 
 export type AccessType = "edit" | "own";
 
@@ -35,37 +41,21 @@ export type PresentationDetail = Presentation & {
   context: Context | null;
 };
 
-export type Slide = {
-  id: UUID;
-  content: string;
-  presentationId: UUID;
-  slideOrder: number;
-};
-export type slideInsert = Slide;
+export type Slide = SlideRow;
+export type slideInsert = NewSlideRow;
 
-export type Context = {
-  id: UUID;
-  prompt: string;
-};
-export type contextInsert = Omit<Context, "id">;
+export type Context = ContextRow;
+export type contextInsert = Pick<NewContextRow, "prompt">;
 export type contextUpdate = Pick<Context, "id" | "prompt">;
 
-export type File = {
-  id: UUID;
-  contextId: UUID;
-  storageKey: string;
-  mimeType: string;
-  fileType: string;
-  sizeBytes: number;
-  originalname: string;
-};
-export type fileInsert = File;
+export type File = FileRow;
+export type fileInsert = NewFileRow;
 
 export type EditAccess = {
   id: UUID;
   email: string;
   presentationId: UUID;
-  expiresAt: Date;
+  expiresAt: Date | null;
 };
 export type editAccessInsert = Omit<EditAccess, "id">;
 
@@ -83,7 +73,7 @@ export const serializePresentation = (
   title: row.title,
   createdAt: toDate(row.createdAt ?? row.created_at),
   userId: row.userId ?? row.user_id,
-  AccessType: accessType,
+  AccessType: accessType ?? null,
   contextId: row.contextId ?? row.context_id,
 });
 
@@ -97,6 +87,7 @@ export const serializeSlide = (row: any, content: string): Slide => ({
 export const serializeContext = (row: any): Context => ({
   id: row.id ?? row.context_id,
   prompt: row.prompt,
+  presentationId: row.presentationId ?? row.presentation_id ?? null,
 });
 
 export const serializeFile = (row: any): File => ({
@@ -106,7 +97,7 @@ export const serializeFile = (row: any): File => ({
   mimeType: row.mimeType ?? row.mime_type,
   fileType: row.fileType ?? row.file_type,
   sizeBytes: row.sizeBytes ?? row.size_bytes,
-  originalname: row.originalname ?? row.original_name,
+  originalName: row.originalName ?? row.original_name,
 });
 
 export const serializePresentationDetail = (row: any): PresentationDetail => ({

@@ -1,15 +1,10 @@
-import { readFile, writeFile } from "fs/promises";
 import mysql2 from "mysql2/promise";
 import dotenv from "dotenv";
 import process from "process";
-import type { Pool, PoolConnection } from "mysql2/promise";
+import { drizzle } from "drizzle-orm/mysql2";
+import * as schema from "./drizzle/schema.js";
+import { MongoClient } from "mongodb";
 dotenv.config();
-
-export async function getSQLScript(fileName: string) {
-  const filePath = `./${fileName}.sql`;
-  const script = readFile(filePath, { encoding: "utf-8" });
-  return script;
-}
 
 const poolParams = {
   port: process.env.DB_PORT,
@@ -35,27 +30,16 @@ export const pool = mysql2.createPool({
   multipleStatements: true,
 });
 
-try {
-  await pool.query(await getSQLScript("schema"));
-} catch (err) {
-  const mysqlErr = err as mysql2.QueryError;
-}
+export const db = drizzle(pool, { schema, mode: "default" });
 
-export async function runTransaction<T, Args extends unknown[]>(
-  db: Pool,
-  func: (db: PoolConnection | Pool, ...props: Args) => Promise<T>,
-  ...props: Args
-): Promise<T> {
-  const connection: PoolConnection = await db.getConnection();
-  try {
-    await connection.beginTransaction();
-    const result: T = await func(connection, ...props);
-    await connection.commit();
-    return result;
-  } catch (err) {
-    await connection.rollback();
-    throw err;
-  } finally {
-    connection.release();
-  }
-}
+type TransactionContext = Parameters<Parameters<typeof db.transaction>[0]>[0];
+export type DBContext = typeof db | TransactionContext;
+
+console.log("MySQL Database initialized");
+
+const mongoClient = new MongoClient(process.env.MONGO_URI);
+await mongoClient.connect();
+export const mongoDB = mongoClient.db("myDatabase");
+
+console.log("MongoDB initialized");
+
