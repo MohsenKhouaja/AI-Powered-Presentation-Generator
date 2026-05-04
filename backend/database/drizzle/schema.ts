@@ -7,6 +7,7 @@ import {
   unique,
   varchar,
 } from "drizzle-orm/mysql-core";
+import { defineRelationsPart } from "drizzle-orm";
 
 export const users = mysqlTable("users", {
   id: varchar("id", { length: 255 }).primaryKey(),
@@ -89,6 +90,97 @@ export const editAccess = mysqlTable(
   ],
 );
 
+// Relations Schema (for defineRelationsPart)
+const tablesSchema = {
+  users,
+  presentations,
+  contexts,
+  slides,
+  files,
+  editAccess,
+};
+
+export const usersRelations = defineRelationsPart(tablesSchema, (r) => ({
+  users: {
+    presentations: r.many.presentations({
+      from: r.users.id,
+      to: r.presentations.userId,
+    }),
+    editAccess: r.many.editAccess({
+      from: r.users.id,
+      to: r.editAccess.userId,
+    }),
+  },
+}));
+
+export const presentationsRelations = defineRelationsPart(
+  tablesSchema,
+  (r) => ({
+    presentations: {
+      user: r.one.users({
+        from: r.presentations.userId,
+        to: r.users.id,
+      }),
+      contexts: r.many.contexts({
+        from: r.presentations.id,
+        to: r.contexts.presentationId,
+      }),
+      slides: r.many.slides({
+        from: r.presentations.id,
+        to: r.slides.presentationId,
+      }),
+      editAccess: r.many.editAccess({
+        from: r.presentations.id,
+        to: r.editAccess.presentationId,
+      }),
+    },
+  }),
+);
+
+export const contextsRelations = defineRelationsPart(tablesSchema, (r) => ({
+  contexts: {
+    presentation: r.one.presentations({
+      from: r.contexts.presentationId,
+      to: r.presentations.id,
+    }),
+    files: r.many.files({
+      from: r.contexts.id,
+      to: r.files.contextId,
+    }),
+  },
+}));
+
+export const slidesRelations = defineRelationsPart(tablesSchema, (r) => ({
+  slides: {
+    presentation: r.one.presentations({
+      from: r.slides.presentationId,
+      to: r.presentations.id,
+    }),
+  },
+}));
+
+export const filesRelations = defineRelationsPart(tablesSchema, (r) => ({
+  files: {
+    context: r.one.contexts({
+      from: r.files.contextId,
+      to: r.contexts.id,
+    }),
+  },
+}));
+
+export const editAccessRelations = defineRelationsPart(tablesSchema, (r) => ({
+  editAccess: {
+    user: r.one.users({
+      from: r.editAccess.userId,
+      to: r.users.id,
+    }),
+    presentation: r.one.presentations({
+      from: r.editAccess.presentationId,
+      to: r.presentations.id,
+    }),
+  },
+}));
+
 export type UserRow = typeof users.$inferSelect;
 export type NewUserRow = typeof users.$inferInsert;
 
@@ -106,3 +198,13 @@ export type NewFileRow = typeof files.$inferInsert;
 
 export type EditAccessRow = typeof editAccess.$inferSelect;
 export type NewEditAccessRow = typeof editAccess.$inferInsert;
+
+export const relations = {
+  ...defineRelationsPart(tablesSchema),
+  ...usersRelations,
+  ...presentationsRelations,
+  ...contextsRelations,
+  ...slidesRelations,
+  ...filesRelations,
+  ...editAccessRelations,
+};
