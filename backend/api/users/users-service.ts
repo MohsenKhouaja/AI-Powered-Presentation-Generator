@@ -1,9 +1,8 @@
 import * as crypto from "node:crypto";
 import { promisify } from "node:util";
-import type { User, userInsert } from "../../database/types.js";
 import type { DBContext } from "../../database/index.js";
 import { users } from "../../database/drizzle/schema.js";
-import { eq, or } from "drizzle-orm";
+import type { NewUserRow, UserRow } from "../../database/types.js";
 
 const scrypt = promisify(crypto.scrypt);
 
@@ -45,18 +44,19 @@ const verifyPassword = async (
   return crypto.timingSafeEqual(derivedKey, storedKey);
 };
 
-const signup = async (db: DBContext, user: userInsert): Promise<User> => {
-  const existingRows = await db
-    .select({ id: users.id })
-    .from(users)
-    .where(or(eq(users.email, user.email), eq(users.username, user.username)))
-    .limit(1);
+const signup = async (db: DBContext, user: NewUserRow): Promise<UserRow> => {
+  const existingRow = await db.query.users.findFirst({
+    where: {
+      OR: [{ email: user.email }, { username: user.username }],
+    },
+    columns: { id: true },
+  });
 
-  if (existingRows.length > 0) {
+  if (existingRow) {
     throw new Error("User with this email or username already exists");
   }
 
-  const userId = crypto.randomUUID();
+  const userId = crypto.randomUUID() as string;
   const hashedPassword = await hashPassword(user.password);
   await db.insert(users).values({
     id: userId,
@@ -76,7 +76,7 @@ const login = async (
   db: DBContext,
   email: string,
   password: string,
-): Promise<User> => {
+): Promise<UserRow> => {
   if (!email || typeof email !== "string") {
     throw new Error("Email is required");
   }
@@ -85,27 +85,19 @@ const login = async (
     throw new Error("Password is required");
   }
 
-  const rows = await db
-    .select({
-      id: users.id,
-      username: users.username,
-      email: users.email,
-      password: users.password,
-    })
-    .from(users)
-    .where(eq(users.email, email))
-    .limit(1);
+  const row = await db.query.users.findFirst({
+    where: { email },
+    columns: {
+      id: true,
+      username: true,
+      email: true,
+      password: true,
+    },
+  });
 
-  if (rows.length === 0) {
+  if (!row) {
     throw new Error("Invalid email or password");
   }
-
-  const row = rows[0] as {
-    id: User["id"];
-    username: string;
-    email: string;
-    password: string;
-  };
 
   const isPasswordValid = await verifyPassword(password, row.password);
   if (!isPasswordValid) {

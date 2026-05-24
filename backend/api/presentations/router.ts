@@ -4,7 +4,7 @@ import type { UUID } from "node:crypto";
 import jsonwebtoken from "jsonwebtoken";
 import { presentationsService } from "./presentations-service.js";
 export const presentationsRouter = Router();
-import { pool } from "../../database/index.js";
+import { db } from "../../database/index.js";
 
 function getAuthenticatedUserId(req: Request): UUID {
   const authHeader = req.headers.authorization;
@@ -25,29 +25,56 @@ function getAuthenticatedUserId(req: Request): UUID {
 }
 presentationsRouter.get("/presentations", async (req, res) => {
   const userId = getAuthenticatedUserId(req);
-  res.json(await presentationsService.findMany(pool, userId));
+  res.json(await presentationsService.findMany(db, userId));
 });
 
 presentationsRouter.get("/presentation/:id", async (req, res) => {
   const userId = getAuthenticatedUserId(req);
   const presentationId = req.params.id;
   res.json(
-    await presentationsService.findOneDetailed(pool, userId, presentationId),
+    await presentationsService.findOneDetailed(
+      db,
+      userId,
+      presentationId as UUID,
+    ),
   );
 });
 
 presentationsRouter.post("/presentation", async (req, res) => {
   const userId = getAuthenticatedUserId(req);
-  const { title } = req.body;
-  const createdPresentation = await presentationsService.create(pool, {
+  const title = req.body?.title ?? "";
+  const createdPresentation = await presentationsService.create(db, {
     title: title,
     userId: userId,
   });
   res.status(201).json(createdPresentation);
 });
 
+presentationsRouter.put("/presentation/:id", async (req, res) => {
+  const userId = getAuthenticatedUserId(req);
+  const presentationId = req.params.id;
+
+  const title =
+    typeof req.body?.title === "string" ? req.body.title.trim() : "";
+
+  if (!title) {
+    res.status(400).json({ error: "Title is required" });
+    return;
+  }
+  const updatedPresentation = await presentationsService.updateTitle(
+    db,
+    userId,
+    presentationId as UUID,
+    title,
+  );
+
+  res.json(updatedPresentation);
+});
+
 presentationsRouter.delete("/presentation/:id", async (req, res) => {
   const userId = getAuthenticatedUserId(req);
   const presentationId = req.params.id;
-  res.json(await presentationsService.remove(pool, userId, presentationId));
+  res.json(
+    await presentationsService.remove(db, userId, presentationId as UUID),
+  );
 });

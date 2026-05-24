@@ -1,19 +1,32 @@
-import { contexts, editAccess, files, presentations, slides, users } from "./drizzle/schema.js";
+import {
+  contexts,
+  editAccess,
+  files,
+  presentations,
+  slides,
+  users,
+} from "./drizzle/schema.js";
 
-export type UserRow = typeof users.$inferSelect;
-export type NewUserRow = typeof users.$inferInsert;
+export type UserRow = Omit<typeof users.$inferSelect, "password">;
+export type NewUserRow = Omit<typeof users.$inferInsert, "id">;
 
 export type PresentationRow = typeof presentations.$inferSelect;
-export type NewPresentationRow = typeof presentations.$inferInsert;
+export type NewPresentationRow = Omit<typeof presentations.$inferInsert, "id">;
 
 export type ContextRow = typeof contexts.$inferSelect;
-export type NewContextRow = typeof contexts.$inferInsert;
+export type NewContextRow = Omit<typeof contexts.$inferInsert, "id">;
 
 export type SlideRow = typeof slides.$inferSelect;
-export type NewSlideRow = typeof slides.$inferInsert;
+export type SlideRowWithContent = typeof slides.$inferSelect; //mohsen
+export type NewSlideRow = Omit<typeof slides.$inferInsert, "id">;
 
 export type FileRow = typeof files.$inferSelect;
-export type NewFileRow = typeof files.$inferInsert;
+export type NewFileRow = Omit<typeof files.$inferInsert, "id">;
+export type uploadedFile = Omit<NewFileRow, "contextId">;
 
 export type EditAccessRow = typeof editAccess.$inferSelect;
-export type NewEditAccessRow = typeof editAccess.$inferInsert;
+export type NewEditAccessRow = {
+  email: string;
+  presentationId: string;
+  expiresAt?: Date;
+};

@@ -10,13 +10,10 @@ import dotenv from "dotenv";
 import authMiddleware from "./middleware/auth.js";
 import cookieParser from "cookie-parser";
 import { apiRouter } from "./api/router.js";
+import authRouter from "./routes/auth.js";
+import { UPLOAD_PATH } from "./config/uploads.js";
 
 dotenv.config();
-
-export const UPLOAD_PATH = path.resolve(
-  process.cwd(),
-  process.env.UPLOAD_PATH?.trim() || "uploads",
-);
 
 mkdirSync(UPLOAD_PATH, { recursive: true });
 
@@ -43,10 +40,10 @@ app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use(authMiddleware);
+app.use("/api/auth", authRouter);
 
 // Routes
-app.use("/api", apiRouter);
+app.use("/api", authMiddleware, apiRouter);
 
 // Health check
 app.get("/health", (req, res) => {

@@ -5,16 +5,16 @@ import path from "node:path";
 import multer from "multer";
 import { UPLOAD_PATH } from "../../config/uploads.js";
 import { randomUUID } from "node:crypto";
+import type { uploadedFile } from "../../database/types.js";
 import type { UUID } from "node:crypto";
-import type { fileInsert } from "../../database/types.js";
 
 export const contextsRouter = Router();
 const upload = multer({
   storage: multer.diskStorage({
     destination: UPLOAD_PATH,
     filename: (_req, file, callback) => {
-      const ext = path.extname(file.originalname).toLowerCase();
-      callback(null, `${randomUUID()}${ext}`);
+      const fileExt = path.extname(file.originalname);
+      callback(null, `${randomUUID()}${fileExt}`);
     },
   }),
   limits: {
@@ -27,28 +27,33 @@ const upload = multer({
 
 const serializeFilesForInsert = (
   files: Express.Multer.File[],
-  contextId: string,
-): fileInsert[] => {
-  return files.map((file) => ({
-    id: file.filename,
-    originalName: file.originalname,
-    storageKey: file.filename,
-    mimeType: file.mimetype,
-    fileType: "attachment",
-    sizeBytes: file.size,
-    contextId,
-  }));
+): uploadedFile[] => {
+  return files.map((file): uploadedFile => {
+    return {
+      fileName: file.filename,
+      mimeType: file.mimetype,
+      sizeBytes: file.size,
+      originalName: file.originalname,
+    };
+  });
 };
+
+contextsRouter.get("/contexts/:id", async (req, res) => {
+  const contextId = req.params.id as unknown as UUID;
+  const context = await contextService.findOne(db, contextId);
+  if (!context) {
+    return res.status(404).json({ message: "Context not found" });
+  }
+  res.json(context);
+});
 
 contextsRouter.post(
   "/contexts",
   upload.array("files", 50),
   async (req, res) => {
-    const contextId = randomUUID();
     const prompt = req.body?.prompt ?? "";
     const newFiles = serializeFilesForInsert(
-      (req.files ?? []) as Express.Multer.File[],
-      contextId,
+      req.files as Express.Multer.File[],
     );
     const createdContext = await contextService.create(db, prompt, newFiles);
     res.status(201).json(createdContext);
@@ -61,12 +66,11 @@ contextsRouter.put(
   async (req, res) => {
     const contextId = req.params.id as string;
     const prompt = (req.body?.prompt ?? "") as string;
-    const deletedFilesIds = Array.isArray(req.body?.deletedFilesIds)
-      ? req.body.deletedFilesIds
+    const deletedFilesNames = Array.isArray(req.body?.deletedFilesNames)
+      ? req.body.deletedFilesNames
       : [];
     const newFiles = serializeFilesForInsert(
       (req.files ?? []) as Express.Multer.File[],
-      contextId,
     );
     const updatedContext = await contextService.update(
       db,
@@ -75,7 +79,7 @@ contextsRouter.put(
         prompt,
       },
       newFiles,
-      deletedFilesIds as UUID[],
+      deletedFilesNames as string[],
     );
 
     res.json(updatedContext);

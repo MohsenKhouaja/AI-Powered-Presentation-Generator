@@ -7,17 +7,21 @@ import {
   unique,
   varchar,
 } from "drizzle-orm/mysql-core";
-import { defineRelationsPart } from "drizzle-orm";
+import { defineRelationsPart, sql } from "drizzle-orm";
 
 export const users = mysqlTable("users", {
-  id: varchar("id", { length: 255 }).primaryKey(),
+  id: varchar("id", { length: 255 })
+    .primaryKey()
+    .default(sql`(UUID())`),
   username: varchar("username", { length: 255 }).notNull().unique(),
   email: varchar("email", { length: 255 }).notNull().unique(),
   password: varchar("password", { length: 255 }).notNull(),
 });
 
 export const presentations = mysqlTable("presentations", {
-  id: varchar("id", { length: 255 }).primaryKey(),
+  id: varchar("id", { length: 255 })
+    .primaryKey()
+    .default(sql`(UUID())`),
   title: varchar("title", { length: 255 }).notNull(),
   userId: varchar("user_id", { length: 255 })
     .notNull()
@@ -28,12 +32,13 @@ export const presentations = mysqlTable("presentations", {
 export const contexts = mysqlTable(
   "contexts",
   {
-    id: varchar("id", { length: 255 }).primaryKey(),
+    id: varchar("id", { length: 255 })
+      .primaryKey()
+      .default(sql`(UUID())`),
     prompt: text("prompt").notNull().default(""),
-    presentationId: varchar("presentation_id", { length: 255 }).references(
-      () => presentations.id,
-      { onDelete: "cascade" },
-    ),
+    presentationId: varchar("presentation_id", { length: 255 })
+      .notNull()
+      .references(() => presentations.id, { onDelete: "cascade" }),
   },
   (table) => [
     unique("contexts_presentation_id_unique").on(table.presentationId),
@@ -43,11 +48,12 @@ export const contexts = mysqlTable(
 export const slides = mysqlTable(
   "slides",
   {
-    id: varchar("id", { length: 255 }).primaryKey(),
+    id: varchar("id", { length: 255 })
+      .primaryKey()
+      .default(sql`(UUID())`),
     presentationId: varchar("presentation_id", { length: 255 })
       .notNull()
       .references(() => presentations.id, { onDelete: "cascade" }),
-    content: text("content").notNull().default(""),
     slideOrder: int("slide_order").notNull(),
   },
   (table) => [
@@ -59,13 +65,14 @@ export const slides = mysqlTable(
 );
 
 export const files = mysqlTable("files", {
-  id: varchar("id", { length: 255 }).primaryKey(),
+  id: varchar("id", { length: 255 })
+    .primaryKey()
+    .default(sql`(UUID())`),
   contextId: varchar("context_id", { length: 255 })
     .notNull()
     .references(() => contexts.id, { onDelete: "cascade" }),
-  storageKey: text("storage_key").notNull(),
+  fileName: text("file_name").notNull(),
   mimeType: text("mime_type").notNull(),
-  fileType: text("file_type").notNull(),
   sizeBytes: bigint("size_bytes", { mode: "number" }).notNull(),
   originalName: text("original_name").notNull(),
 });
@@ -73,7 +80,9 @@ export const files = mysqlTable("files", {
 export const editAccess = mysqlTable(
   "edit_access",
   {
-    id: varchar("id", { length: 255 }).primaryKey(),
+    id: varchar("id", { length: 255 })
+      .primaryKey()
+      .default(sql`(UUID())`),
     userId: varchar("user_id", { length: 255 })
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -121,7 +130,7 @@ export const presentationsRelations = defineRelationsPart(
         from: r.presentations.userId,
         to: r.users.id,
       }),
-      contexts: r.many.contexts({
+      contexts: r.one.contexts({
         from: r.presentations.id,
         to: r.contexts.presentationId,
       }),
@@ -180,8 +189,6 @@ export const editAccessRelations = defineRelationsPart(tablesSchema, (r) => ({
     }),
   },
 }));
-
-
 
 export const relations = {
   ...defineRelationsPart(tablesSchema),
