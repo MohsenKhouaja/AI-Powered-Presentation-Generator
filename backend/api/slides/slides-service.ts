@@ -10,6 +10,7 @@ import {
   slides,
 } from "../../database/drizzle/schema.js";
 import type { SlideRow, SlideRowWithContent } from "../../database/types.js";
+import { contextService } from "../contexts/contexts-service.js";
 
 export type slideOrder = {
   id: UUID;
@@ -26,8 +27,149 @@ type SlideCreateInput = {
   slideOrder?: number;
 };
 
+type GeneratedSlide = {
+  markdown: string;
+};
+
+type ContextFileForPrompt = {
+  originalName?: string;
+  mimeType?: string;
+  sizeBytes?: number;
+  base64File?: string;
+};
+
 const slidesContentCollection: Collection<SlideContentDocument> =
   mongoDB.collection<SlideContentDocument>("slides_content");
+
+const GROQ_CHAT_COMPLETIONS_URL =
+  "https://api.groq.com/openai/v1/chat/completions";
+
+const extractJsonObject = (text: string): string => {
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start === -1 || end === -1 || end <= start) {
+    throw new Error("LLM response did not contain JSON object");
+  }
+  return text.slice(start, end + 1);
+};
+
+const generateSlidesWithGroq = async (input: {
+  title: string;
+  contextPrompt: string;
+  files: ContextFileForPrompt[];
+  numSlides?: number;
+}): Promise<GeneratedSlide[]> => {
+  const apiKey = process.env.GROQ_API_KEY || process.env.GROQ;
+  if (!apiKey) {
+    throw new Error("Groq API key is not set (expected GROQ or GROQ_API_KEY)");
+  }
+
+  const model = process.env.GROQ_MODEL || "llama-3.1-70b-versatile";
+
+  const system = "You generate slide decks. Output must be valid JSON only.";
+
+  const maxBase64Chars = Number(
+    process.env.GROQ_MAX_FILE_BASE64_CHARS || 50_000,
+  );
+
+  const filesForPrompt = (input.files ?? []).map((file, index) => {
+    const base64 = typeof file.base64File === "string" ? file.base64File : "";
+    const truncated =
+      maxBase64Chars > 0 && base64.length > maxBase64Chars
+        ? base64.slice(0, maxBase64Chars)
+        : base64;
+
+    return {
+      index: index + 1,
+      originalName: file.originalName ?? "",
+      mimeType: file.mimeType ?? "",
+      sizeBytes: typeof file.sizeBytes === "number" ? file.sizeBytes : null,
+      base64File: truncated,
+      base64Truncated: truncated.length !== base64.length,
+    };
+  });
+
+  const slideCountRule =
+    typeof input.numSlides === "number"
+      ? `- Generate exactly ${input.numSlides} slides.`
+      : "- Prefer 6 to 12 slides depending on content.";
+
+  const user = `Create a slide deck in Markdown for the following presentation.
+
+Title: ${input.title}
+
+Context:
+${input.contextPrompt}
+
+Files (base64, may be truncated):
+${JSON.stringify(filesForPrompt, null, 2)}
+
+Return ONLY a JSON object of the form:
+{
+  "slides": [
+    { "markdown": "# Slide title\\n- bullet" }
+  ]
+}
+
+Rules:
+- Each slide must be self-contained Markdown.
+${slideCountRule}
+- Slide 1 is a title slide.
+- Use concise bullets; no giant paragraphs.
+`;
+
+  const response = await fetch(GROQ_CHAT_COMPLETIONS_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model,
+      temperature: 0.4,
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: user },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    const bodyText = await response.text().catch(() => "");
+    throw new Error(
+      `Groq request failed (${response.status}): ${bodyText || response.statusText}`,
+    );
+  }
+
+  const data = (await response.json()) as {
+    choices?: Array<{ message?: { content?: string | null } }>;
+  };
+
+  const content = data.choices?.[0]?.message?.content ?? "";
+  if (!content.trim()) {
+    throw new Error("Groq response was empty");
+  }
+
+  const jsonText = extractJsonObject(content);
+  const parsed = JSON.parse(jsonText) as { slides?: GeneratedSlide[] };
+
+  const slidesArray = Array.isArray(parsed.slides) ? parsed.slides : [];
+  let normalized = slidesArray
+    .map((s) => ({
+      markdown: typeof s?.markdown === "string" ? s.markdown : "",
+    }))
+    .filter((s) => s.markdown.trim().length > 0);
+
+  if (typeof input.numSlides === "number" && input.numSlides > 0) {
+    normalized = normalized.slice(0, input.numSlides);
+  }
+
+  if (normalized.length === 0) {
+    throw new Error("Groq did not return any slides");
+  }
+
+  return normalized;
+};
 
 const hasActiveEditAccess = async (
   db: DBContext,
@@ -259,6 +401,82 @@ const updateOrder = async (
   return [secondSlideOrder];
 };
 
+const generateFromContext = async (
+  db: DBContext,
+  userId: UUID,
+  presentationId: UUID,
+  contextId: UUID,
+  numSlides?: number,
+): Promise<SlideRowWithContent[]> => {
+  await assertCanEditPresentation(db, presentationId, userId);
+
+  const presentationRow = await db.query.presentations.findFirst({
+    where: { id: presentationId },
+    columns: { id: true, title: true },
+  });
+
+  if (!presentationRow) {
+    throw new Error("presentation doesn't exist");
+  }
+
+  const contextRow = await contextService.findOne(db, contextId);
+  if (!contextRow) {
+    throw new Error("context doesn't exist");
+  }
+
+  if (contextRow.presentationId !== presentationId) {
+    throw new Error("context does not belong to this presentation");
+  }
+
+  const contextPrompt = contextRow.prompt ?? "";
+  const contextFiles = Array.isArray(contextRow.files) ? contextRow.files : [];
+
+  if (!contextPrompt.trim() && contextFiles.length === 0) {
+    throw new Error("presentation context is empty");
+  }
+
+  const generated = await generateSlidesWithGroq({
+    title: presentationRow.title,
+    contextPrompt,
+    files: contextFiles,
+    numSlides,
+  });
+
+  await removeAllByPresentation(db, userId, presentationId);
+
+  const createdSlides: SlideRowWithContent[] = [];
+  const mongoDocs: SlideContentDocument[] = [];
+
+  await db.transaction(async (tx) => {
+    for (let i = 0; i < generated.length; i++) {
+      const slideId = randomUUID() as UUID;
+      const markdown = generated[i].markdown;
+      const slideOrder = i + 1;
+
+      await tx.insert(slides).values({
+        id: slideId,
+        presentationId,
+        slideOrder,
+      });
+
+      createdSlides.push({
+        id: slideId,
+        presentationId,
+        content: markdown,
+        slideOrder,
+      });
+
+      mongoDocs.push({ _id: slideId, slide_content: markdown });
+    }
+  });
+
+  if (mongoDocs.length > 0) {
+    await slidesContentCollection.insertMany(mongoDocs);
+  }
+
+  return createdSlides;
+};
+
 const removeAllByPresentation = async (
   db: DBContext,
   userId: UUID,
@@ -279,6 +497,7 @@ const removeAllByPresentation = async (
     await slidesContentCollection.deleteMany({
       _id: { $in: slideRows.map((slide) => slide.id) },
     });
+    await db.delete(slides).where(eq(slides.presentationId, presentationId));
   }
 };
 
@@ -289,5 +508,6 @@ export const slidesService = {
   update,
   removeOne,
   removeAllByPresentation,
+  generateFromContext,
   updateOrder,
 } as const;
