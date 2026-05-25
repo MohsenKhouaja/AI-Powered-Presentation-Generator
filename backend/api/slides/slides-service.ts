@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { UUID } from "node:crypto";
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, gt, inArray } from "drizzle-orm";
 import type { Collection } from "mongodb";
 import type { DBContext } from "../../database/index.js";
 import { mongoDB } from "../../database/index.js";
@@ -9,7 +9,7 @@ import {
   presentations,
   slides,
 } from "../../database/drizzle/schema.js";
-import type { SlideRow } from "../../database/types.js";
+import type { SlideRow, SlideRowWithContent } from "../../database/types.js";
 
 export type slideOrder = {
   id: UUID;
@@ -81,7 +81,7 @@ const findMany = async (
   db: DBContext,
   userId: UUID,
   presentationId: UUID,
-): Promise<SlideRow[]> => {
+): Promise<SlideRowWithContent[]> => {
   await assertCanEditPresentation(db, presentationId, userId);
 
   const slideRows: SlideRow[] = await db.query.slides.findMany({
@@ -95,7 +95,7 @@ const findMany = async (
       return {
         id: slideRow.id,
         presentationId: slideRow.presentationId,
-        content: mongoContent ?? slideRow.content,
+        content: mongoContent,
         slideOrder: slideRow.slideOrder,
       };
     }),
@@ -107,7 +107,7 @@ const findOne = async (
   userId: UUID,
   presentationId: UUID,
   slideId: UUID,
-): Promise<SlideRow> => {
+): Promise<SlideRowWithContent> => {
   await assertCanEditPresentation(db, presentationId, userId);
 
   const slideRow: SlideRow | null = await db.query.slides.findFirst({
@@ -122,7 +122,7 @@ const findOne = async (
   return {
     id: slideRow.id,
     presentationId: slideRow.presentationId,
-    content: mongoContent ?? slideRow.content,
+    content: mongoContent,
     slideOrder: slideRow.slideOrder,
   };
 };
@@ -132,7 +132,7 @@ const create = async (
   userId: UUID,
   presentationId: UUID,
   input: SlideCreateInput,
-): Promise<SlideRow> => {
+): Promise<SlideRowWithContent> => {
   await assertCanEditPresentation(db, presentationId, userId);
 
   const slideId = randomUUID();
@@ -175,7 +175,7 @@ const update = async (
   presentationId: UUID,
   slideId: UUID,
   content: string,
-): Promise<SlideRow> => {
+): Promise<SlideRowWithContent> => {
   await assertCanEditPresentation(db, presentationId, userId);
 
   const slideRow: SlideRow | null = await db.query.slides.findFirst({
@@ -200,7 +200,6 @@ const update = async (
   };
 };
 
-//mohsen nbadel el ordre
 const removeOne = async (
   db: DBContext,
   userId: UUID,
@@ -211,14 +210,24 @@ const removeOne = async (
 
   const slideRow = await db.query.slides.findFirst({
     where: { id: slideId, presentationId },
-    columns: { id: true },
   });
 
   if (!slideRow) {
     throw new Error("slide doesn't exist");
   }
 
-  await db.delete(slides).where(eq(slides.id, slideId));
+  await db.transaction(async (tx) => {
+    await tx.delete(slides).where(eq(slides.id, slideId));
+    await tx
+      .update(slides)
+      .set({ slideOrder: (slideRow.slideOrder ?? 0) - 1 })
+      .where(
+        and(
+          eq(slides.presentationId, presentationId),
+          gt(slides.slideOrder, slideRow.slideOrder ?? 0),
+        ),
+      );
+  });
   await slidesContentCollection.deleteOne({ _id: slideId });
 
   return { id: slideId, deleted: true };

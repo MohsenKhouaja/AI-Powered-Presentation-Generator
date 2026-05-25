@@ -6,12 +6,11 @@ import { presentations, slides } from "../../database/drizzle/schema.js";
 import { eq } from "drizzle-orm";
 import { mongoDB } from "../../database/index.js";
 import type {
-  ContextRow,
   NewPresentationRow,
+  presentationDetail,
   PresentationRow,
   SlideRow,
 } from "../../database/types.js";
-import { fileService } from "../files/files-service.js";
 import { contextService } from "../contexts/contexts-service.js";
 import { slidesService } from "../slides/slides-service.js";
 
@@ -86,12 +85,12 @@ const findMany = async (
 
   return [...ownedPresentations, ...editPresentations];
 };
-//mohsen type here
+
 const findOneDetailed = async (
   db: DBContext,
   userID: UUID,
   presentationId: UUID,
-) => {
+): Promise<presentationDetail> => {
   const presentationRow = await db.query.presentations.findFirst({
     where: { id: presentationId },
     columns: { id: true, title: true, userId: true, createdAt: true },

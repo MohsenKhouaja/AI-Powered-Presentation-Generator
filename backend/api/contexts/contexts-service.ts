@@ -9,14 +9,16 @@ import { UPLOAD_PATH } from "../../config/uploads.js";
 import path from "node:path";
 import type {
   ContextRow,
-  FileRow,
+  ContextWithFilesRow,
   NewContextRow,
   NewFileRow,
   uploadedFile,
 } from "../../database/types.js";
 
-//type ContextWithFilesRow = ContextRow & { files: FileRow[] };
-const findOne = async (db: DBContext, contextId: UUID) => {
+const findOne = async (
+  db: DBContext,
+  contextId: UUID,
+): Promise<ContextWithFilesRow> => {
   const context = await db.query.contexts.findFirst({
     where: { id: contextId },
     with: {
