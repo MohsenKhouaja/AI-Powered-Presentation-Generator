@@ -2,8 +2,6 @@ import { jwtDecode, type JwtPayload } from "jwt-decode";
 import { useState } from "react";
 import type { ReactNode } from "react";
 import authContext from "./AuthContext";
-import { parseValidationErrorMessage } from "@/lib/dto/auth";
-
 type HttpMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
 
 function extractAccessToken(payload: unknown): string | null {
@@ -44,13 +42,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       if (!response.ok) {
         let errorMessage = `${response.status}: ${response.statusText}`;
-        try {
-          const errorPayload = await response.json();
-          errorMessage =
-            parseValidationErrorMessage(errorPayload) ?? errorMessage;
-        } catch (parseError) {
-          console.error("Failed to parse auth error payload", parseError);
-        }
         setToken(null);
         setIsLoading(false);
         throw new Error(errorMessage);

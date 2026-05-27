@@ -12,7 +12,6 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/context/AuthContext";
 import { useState } from "react";
-import { parseAuthCredentialsInput } from "@/lib/dto/auth";
 import {
   useLoginMutation,
   useRegisterMutation,
@@ -41,16 +40,13 @@ export function AuthForm() {
       password: String(formData.get("password") ?? ""),
     };
 
-    const parsedCredentials = parseAuthCredentialsInput(credentials);
-    if (!parsedCredentials.success) {
-      setFormError(
-        parsedCredentials.error.issues[0]?.message ?? "Invalid form",
-      );
+    if (!credentials.email || !credentials.password) {
+      setFormError("Email and password are required");
       return;
     }
 
     setFormError(null);
-    const { email, password } = parsedCredentials.data;
+    const { email, password } = credentials;
     setEmail(email);
     if (mode === "login") {
       await loginMutation
