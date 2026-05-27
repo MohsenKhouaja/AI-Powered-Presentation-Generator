@@ -12,7 +12,6 @@ import { PresentationViewerPage } from "./pages/PresentationViewerPage";
 import { PresentationEditorPage } from "./pages/PresentationEditorPage";
 import { SharedPresentationsPage } from "./pages/SharedPresentationsPage";
 import { SharedPresentationReadOnlyPage } from "./pages/SharedPresentationReadOnlyPage";
-import { ThemeSettingsPage } from "./pages/ThemeSettingsPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 
 export default function App() {
@@ -29,10 +28,6 @@ export default function App() {
               <Route element={<AppShellLayout />}>
                 <Route path="/dashboard" element={<DashboardPage />} />
                 <Route path="/shared" element={<SharedPresentationsPage />} />
-                <Route
-                  path="/settings/themes"
-                  element={<ThemeSettingsPage />}
-                />
               </Route>
 
               <Route

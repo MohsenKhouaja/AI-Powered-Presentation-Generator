@@ -36,6 +36,13 @@ export function DashboardPage() {
   const presentationsQuery = usePresentationsQuery();
   const createMutation = useCreatePresentationMutation();
   const deleteMutation = useDeletePresentationMutation();
+  const presentations = presentationsQuery.data ?? [];
+  const ownedPresentations = presentations.filter(
+    (presentation) => presentation.AccessType === "own"
+  );
+  const editablePresentations = presentations.filter(
+    (presentation) => presentation.AccessType === "edit"
+  );
 
   const onCreate = async (event: FormEvent) => {
     event.preventDefault();
@@ -113,64 +120,138 @@ export function DashboardPage() {
         </Alert>
       ) : null}
 
-      {presentationsQuery.isSuccess && presentationsQuery.data.length === 0 ? (
-        <Empty className="border">
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <FileTextIcon />
-            </EmptyMedia>
-            <EmptyTitle>No presentations yet</EmptyTitle>
-            <EmptyDescription>
-              Start by creating your first presentation.
-            </EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      ) : null}
+      {presentationsQuery.isSuccess ? (
+        <div className="space-y-10">
+          <section className="space-y-4" aria-label="Owned presentations">
+            <header className="space-y-2">
+              <p className="text-sm font-medium text-[color:var(--color-gravel)] font-[var(--font-inter)]">
+                Owned
+              </p>
+              <h3 className="font-[var(--font-waldenburg)] text-[32px] leading-[1.17] tracking-[-0.02em] text-[color:var(--color-obsidian)]">
+                Your presentations
+              </h3>
+            </header>
+            {ownedPresentations.length === 0 ? (
+              <Empty className="border">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <FileTextIcon />
+                  </EmptyMedia>
+                  <EmptyTitle>No owned presentations</EmptyTitle>
+                  <EmptyDescription>
+                    Create a presentation to see it here.
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {ownedPresentations.map((presentation) => (
+                  <Card
+                    key={presentation.id}
+                    className="rounded-[16px] bg-white shadow-[var(--shadow-subtle-7)]"
+                  >
+                    <CardHeader>
+                      <CardTitle className="line-clamp-2 text-base">
+                        {presentation.title}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground">
+                        Created {new Date(presentation.createdAt).toLocaleString()}
+                      </p>
+                      <Badge variant="outline" className="mt-2">
+                        Owner
+                      </Badge>
+                    </CardContent>
+                    <CardFooter className="flex flex-wrap gap-2">
+                      <Button asChild size="sm" variant="outline">
+                        <Link to={`/presentations/${presentation.id}`}>View</Link>
+                      </Button>
+                      <Button asChild size="sm" variant="outline">
+                        <Link to={`/presentations/${presentation.id}/edit`}>
+                          Edit
+                        </Link>
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => deleteMutation.mutate(presentation.id)}
+                        disabled={deleteMutation.isPending}
+                      >
+                        <Trash2Icon className="mr-1 size-4" /> Delete
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </section>
 
-      {presentationsQuery.isSuccess && presentationsQuery.data.length > 0 ? (
-        <section
-          className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
-          aria-label="Presentations list"
-        >
-          {presentationsQuery.data.map((presentation) => (
-            <Card key={presentation.id}>
-              <CardHeader>
-                <CardTitle className="line-clamp-2 text-base">
-                  {presentation.title}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  Created {new Date(presentation.createdAt).toLocaleString()}
-                </p>
-                <Badge variant="outline" className="mt-2">
-                  {presentation.AccessType === "own" ? "Owner" : "Shared edit"}
-                </Badge>
-              </CardContent>
-              <CardFooter className="flex flex-wrap gap-2">
-                <Button asChild size="sm" variant="outline">
-                  <Link to={`/presentations/${presentation.id}`}>View</Link>
-                </Button>
-                <Button asChild size="sm" variant="outline">
-                  <Link to={`/presentations/${presentation.id}/edit`}>
-                    Edit
-                  </Link>
-                </Button>
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  onClick={() => deleteMutation.mutate(presentation.id)}
-                  disabled={
-                    deleteMutation.isPending ||
-                    presentation.AccessType !== "own"
-                  }
-                >
-                  <Trash2Icon className="mr-1 size-4" /> Delete
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
-        </section>
+          <section className="space-y-4" aria-label="Editable presentations">
+            <header className="space-y-2">
+              <p className="text-sm font-medium text-[color:var(--color-gravel)] font-[var(--font-inter)]">
+                Editable
+              </p>
+              <h3 className="font-[var(--font-waldenburg)] text-[32px] leading-[1.17] tracking-[-0.02em] text-[color:var(--color-obsidian)]">
+                Shared with you
+              </h3>
+            </header>
+            {editablePresentations.length === 0 ? (
+              <Empty className="border">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <FileTextIcon />
+                  </EmptyMedia>
+                  <EmptyTitle>No editable presentations</EmptyTitle>
+                  <EmptyDescription>
+                    Collaborations with edit access will appear here.
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {editablePresentations.map((presentation) => (
+                  <Card
+                    key={presentation.id}
+                    className="rounded-[16px] bg-white shadow-[var(--shadow-subtle-7)]"
+                  >
+                    <CardHeader>
+                      <CardTitle className="line-clamp-2 text-base">
+                        {presentation.title}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground">
+                        Created {new Date(presentation.createdAt).toLocaleString()}
+                      </p>
+                      <Badge variant="outline" className="mt-2">
+                        Shared edit
+                      </Badge>
+                    </CardContent>
+                    <CardFooter className="flex flex-wrap gap-2">
+                      <Button asChild size="sm" variant="outline">
+                        <Link to={`/presentations/${presentation.id}`}>View</Link>
+                      </Button>
+                      <Button asChild size="sm" variant="outline">
+                        <Link to={`/presentations/${presentation.id}/edit`}>
+                          Edit
+                        </Link>
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => deleteMutation.mutate(presentation.id)}
+                        disabled={true}
+                      >
+                        <Trash2Icon className="mr-1 size-4" /> Delete
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
       ) : null}
     </div>
   );

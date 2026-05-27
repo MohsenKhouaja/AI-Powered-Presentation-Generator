@@ -31,10 +31,6 @@ interface CreatePresentationInput {
 interface UpdatePresentationInput {
   presentationId: string;
   title: string;
-  slides: Array<{
-    content: string;
-    slideOrder: number;
-  }>;
 }
 
 export function usePresentationsQuery() {
@@ -80,10 +76,9 @@ export function useUpdatePresentationMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ presentationId, title, slides }: UpdatePresentationInput) =>
+    mutationFn: ({ presentationId, title }: UpdatePresentationInput) =>
       api.put<PresentationDetail>(`/api/presentation/${presentationId}`, {
         title,
-        slides,
       }),
     onSuccess: async (updatedPresentation) => {
       await queryClient.invalidateQueries({
@@ -109,9 +104,6 @@ export function useDeletePresentationMutation() {
       });
       queryClient.removeQueries({
         queryKey: queryKeys.presentations.detail(presentationId),
-      });
-      queryClient.removeQueries({
-        queryKey: queryKeys.share.presentationAccess(presentationId),
       });
     },
   });

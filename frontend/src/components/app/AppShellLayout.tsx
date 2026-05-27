@@ -1,7 +1,5 @@
-import { LayoutDashboard, LogOut, Palette, Share2 } from "lucide-react";
+import { LayoutDashboard, LogOut, Share2 } from "lucide-react";
 import { NavLink, Outlet } from "react-router-dom";
-import { ThemeDropdown } from "@/components/ThemeDropdown";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useLogoutMutation } from "@/hooks/queries/useAuthSession";
@@ -10,7 +8,6 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/shared", label: "Shared", icon: Share2 },
-  { to: "/settings/themes", label: "Themes", icon: Palette },
 ] as const;
 
 export function AppShellLayout() {
@@ -48,8 +45,6 @@ export function AppShellLayout() {
         <header className="flex flex-wrap items-center justify-between gap-3 border-b p-4">
           <h1 className="text-lg font-semibold">Presentation Workspace</h1>
           <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <ThemeDropdown />
             <Separator orientation="vertical" className="hidden h-6 md:block" />
             <Button
               variant="outline"

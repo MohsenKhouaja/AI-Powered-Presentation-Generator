@@ -9,7 +9,7 @@ import {
   LockIcon,
 } from "lucide-react";
 import { usePresentationDetailQuery } from "@/hooks/queries/usePresentations";
-import { useReadOnlyShareAccessQuery } from "@/hooks/queries/useShareReadOnly";
+import { usePresentationSlidesQuery } from "@/hooks/queries/useSlides";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
@@ -21,18 +21,19 @@ import {
   EmptyHeader,
   EmptyTitle,
 } from "@/components/ui/empty";
+import { SlideThemeBoundary } from "@/components/app/SlideThemeBoundary";
 
 export function SharedPresentationReadOnlyPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
   const detailQuery = usePresentationDetailQuery(id ?? null, Boolean(id));
-  const shareAccessQuery = useReadOnlyShareAccessQuery(id ?? null, Boolean(id));
+  const slidesQuery = usePresentationSlidesQuery(id ?? null, Boolean(id));
   const [slideIndex, setSlideIndex] = useState(0);
 
   const slides = useMemo(
-    () => detailQuery.data?.slides ?? [],
-    [detailQuery.data?.slides],
+    () => slidesQuery.data ?? [],
+    [slidesQuery.data],
   );
 
   useEffect(() => {
@@ -54,7 +55,7 @@ export function SharedPresentationReadOnlyPage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [navigate, slides.length]);
 
-  if (detailQuery.isPending) {
+  if (detailQuery.isPending || slidesQuery.isPending) {
     return (
       <main className="flex min-h-screen items-center justify-center">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -64,16 +65,15 @@ export function SharedPresentationReadOnlyPage() {
     );
   }
 
-  if (detailQuery.isError || !detailQuery.data) {
+  if (detailQuery.isError || slidesQuery.isError || !detailQuery.data) {
+    const error = detailQuery.error ?? slidesQuery.error;
     return (
       <main className="mx-auto min-h-screen w-full max-w-3xl p-6">
         <Alert variant="destructive">
           <AlertCircleIcon />
           <AlertTitle>Failed to load shared presentation</AlertTitle>
           <AlertDescription>
-            {detailQuery.error instanceof Error
-              ? detailQuery.error.message
-              : "Unknown error"}
+            {error instanceof Error ? error.message : "Unknown error"}
           </AlertDescription>
         </Alert>
         <Button className="mt-4" asChild>
@@ -107,7 +107,7 @@ export function SharedPresentationReadOnlyPage() {
       aria-label="Shared read-only viewer"
     >
       <section className="mx-auto flex w-full max-w-6xl items-center p-4 md:p-8">
-        <article className="w-full rounded-xl border bg-card p-6 shadow-sm md:p-10">
+        <div className="w-full">
           <header className="mb-4 flex flex-wrap items-center justify-between gap-2">
             <h1 className="text-lg font-semibold md:text-xl">
               {detailQuery.data.title}
@@ -122,19 +122,14 @@ export function SharedPresentationReadOnlyPage() {
             </div>
           </header>
 
-          {shareAccessQuery.isSuccess ? (
-            <p className="mb-4 text-xs text-muted-foreground">
-              Shared with {shareAccessQuery.data.length} user
-              {shareAccessQuery.data.length === 1 ? "" : "s"}
-            </p>
-          ) : null}
-
-          <div className="prose prose-neutral max-w-none dark:prose-invert">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-              {currentSlide.content}
-            </ReactMarkdown>
-          </div>
-        </article>
+          <SlideThemeBoundary className="rounded-xl border bg-card p-6 shadow-sm md:p-10">
+            <div className="prose prose-neutral max-w-none dark:prose-invert">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {currentSlide.content}
+              </ReactMarkdown>
+            </div>
+          </SlideThemeBoundary>
+        </div>
       </section>
 
       <footer className="sticky bottom-0 border-t bg-background/95 px-4 py-3 backdrop-blur">

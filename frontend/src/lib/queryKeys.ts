@@ -15,9 +15,11 @@ export const queryKeys = {
     detail: (contextId: string) => ["contexts", "detail", contextId] as const,
     files: (contextId: string) => ["contexts", "files", contextId] as const,
   },
-  share: {
-    root: () => ["share", "readonly"] as const,
-    presentationAccess: (presentationId: string) =>
-      ["share", "readonly", "presentation", presentationId, "access"] as const,
+  slides: {
+    root: () => ["slides"] as const,
+    byPresentation: (presentationId: string) =>
+      ["slides", "presentation", presentationId] as const,
+    detail: (presentationId: string, slideId: string) =>
+      ["slides", "presentation", presentationId, "slide", slideId] as const,
   },
 } as const;

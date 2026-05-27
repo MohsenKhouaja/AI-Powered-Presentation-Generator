@@ -145,7 +145,10 @@ export default function FileUpload04() {
 
             <div className="flex items-center space-x-2.5">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm bg-background shadow-sm ring-1 ring-inset ring-border">
-                <FileSpreadsheet className="h-5 w-5 text-foreground" aria-hidden={true} />
+                <FileSpreadsheet
+                  className="h-5 w-5 text-foreground"
+                  aria-hidden={true}
+                />
               </span>
               <div>
                 <p className="text-pretty text-xs font-medium text-foreground">

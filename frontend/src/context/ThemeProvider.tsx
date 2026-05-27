@@ -12,9 +12,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   );
 
   useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    document.documentElement.classList.remove("root", "dark");
-    document.documentElement.classList.add(tone);
     localStorage.setItem("theme", theme);
     localStorage.setItem("tone", tone);
   }, [theme, tone]);

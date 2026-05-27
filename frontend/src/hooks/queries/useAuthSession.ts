@@ -76,7 +76,6 @@ export function useLogoutMutation() {
       queryClient.removeQueries({
         queryKey: queryKeys.presentations.details(),
       });
-      queryClient.removeQueries({ queryKey: queryKeys.share.root() });
       await queryClient.invalidateQueries({
         queryKey: queryKeys.auth.session(),
       });

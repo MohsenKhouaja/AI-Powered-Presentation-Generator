@@ -9,6 +9,7 @@ import {
   PencilIcon,
 } from "lucide-react";
 import { usePresentationDetailQuery } from "@/hooks/queries/usePresentations";
+import { usePresentationSlidesQuery } from "@/hooks/queries/useSlides";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Spinner } from "@/components/ui/spinner";
@@ -19,16 +20,18 @@ import {
   EmptyHeader,
   EmptyTitle,
 } from "@/components/ui/empty";
+import { SlideThemeBoundary } from "@/components/app/SlideThemeBoundary";
 
 export function PresentationViewerPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const detailQuery = usePresentationDetailQuery(id ?? null, Boolean(id));
+  const slidesQuery = usePresentationSlidesQuery(id ?? null, Boolean(id));
   const [slideIndex, setSlideIndex] = useState(0);
 
   const slides = useMemo(
-    () => detailQuery.data?.slides ?? [],
-    [detailQuery.data?.slides],
+    () => slidesQuery.data ?? [],
+    [slidesQuery.data],
   );
 
   useEffect(() => {
@@ -50,7 +53,7 @@ export function PresentationViewerPage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [navigate, slides.length]);
 
-  if (detailQuery.isPending) {
+  if (detailQuery.isPending || slidesQuery.isPending) {
     return (
       <main className="flex min-h-screen items-center justify-center">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -60,16 +63,15 @@ export function PresentationViewerPage() {
     );
   }
 
-  if (detailQuery.isError) {
+  if (detailQuery.isError || slidesQuery.isError) {
+    const error = detailQuery.error ?? slidesQuery.error;
     return (
       <main className="mx-auto min-h-screen w-full max-w-3xl p-6">
         <Alert variant="destructive">
           <AlertCircleIcon />
           <AlertTitle>Failed to load presentation</AlertTitle>
           <AlertDescription>
-            {detailQuery.error instanceof Error
-              ? detailQuery.error.message
-              : "Unknown error"}
+            {error instanceof Error ? error.message : "Unknown error"}
           </AlertDescription>
         </Alert>
         <Button className="mt-4" asChild>
@@ -103,7 +105,7 @@ export function PresentationViewerPage() {
       aria-label="Presentation viewer"
     >
       <section className="mx-auto flex w-full max-w-6xl items-center p-4 md:p-8">
-        <article className="w-full rounded-xl border bg-card p-6 shadow-sm md:p-10">
+        <div className="w-full">
           <header className="mb-4 flex items-center justify-between">
             <h1 className="text-lg font-semibold md:text-xl">
               {detailQuery.data.title}
@@ -119,12 +121,14 @@ export function PresentationViewerPage() {
               </Button>
             </div>
           </header>
-          <div className="prose prose-neutral max-w-none dark:prose-invert">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-              {currentSlide.content}
-            </ReactMarkdown>
-          </div>
-        </article>
+          <SlideThemeBoundary className="rounded-xl border bg-card p-6 shadow-sm md:p-10">
+            <div className="prose prose-neutral max-w-none dark:prose-invert">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {currentSlide.content}
+              </ReactMarkdown>
+            </div>
+          </SlideThemeBoundary>
+        </div>
       </section>
 
       <footer className="sticky bottom-0 border-t bg-background/95 px-4 py-3 backdrop-blur">

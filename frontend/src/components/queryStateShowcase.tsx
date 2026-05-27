@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { AlertCircleIcon, FileTextIcon, ShieldCheckIcon } from "lucide-react";
+import { useState } from "react";
+import { AlertCircleIcon, FileTextIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -22,7 +22,6 @@ import {
   useCreateContextMutation,
   useUpdateContextMutation,
 } from "@/hooks/queries/useContextsFiles";
-import { useReadOnlyShareAccessQuery } from "@/hooks/queries/useShareReadOnly";
 import {
   useLogoutMutation,
   useSessionQuery,
@@ -31,7 +30,6 @@ import {
 export function QueryStateShowcase() {
   const [titleInput, setTitleInput] = useState("");
   const [promptInput, setPromptInput] = useState("Context prompt sample");
-  const [sharePresentationId, setSharePresentationId] = useState("");
 
   const sessionQuery = useSessionQuery();
   const logoutMutation = useLogoutMutation();
@@ -40,16 +38,6 @@ export function QueryStateShowcase() {
   const deletePresentationMutation = useDeletePresentationMutation();
   const createContextMutation = useCreateContextMutation();
   const updateContextMutation = useUpdateContextMutation();
-
-  const firstPresentationId = useMemo(
-    () => presentationsQuery.data?.[0]?.id ?? null,
-    [presentationsQuery.data],
-  );
-
-  const shareAccessQuery = useReadOnlyShareAccessQuery(
-    sharePresentationId.trim() || firstPresentationId,
-    Boolean(sharePresentationId.trim() || firstPresentationId),
-  );
 
   return (
     <div className="mx-auto w-full max-w-5xl p-6 space-y-4">
@@ -232,60 +220,6 @@ export function QueryStateShowcase() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Read-Only Share Query</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <Input
-            value={sharePresentationId}
-            onChange={(event) => setSharePresentationId(event.target.value)}
-            placeholder="Presentation ID (optional)"
-          />
-
-          {shareAccessQuery.isPending ? (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Spinner /> Loading share access list...
-            </div>
-          ) : null}
-
-          {shareAccessQuery.isError ? (
-            <Alert variant="destructive">
-              <AlertCircleIcon />
-              <AlertTitle>Share access fetch failed</AlertTitle>
-              <AlertDescription>
-                {shareAccessQuery.error instanceof Error
-                  ? shareAccessQuery.error.message
-                  : "Unknown error"}
-              </AlertDescription>
-            </Alert>
-          ) : null}
-
-          {shareAccessQuery.isSuccess && shareAccessQuery.data.length === 0 ? (
-            <Empty>
-              <EmptyHeader>
-                <EmptyMedia variant="icon">
-                  <ShieldCheckIcon />
-                </EmptyMedia>
-                <EmptyTitle>No read-only share entries</EmptyTitle>
-                <EmptyDescription>
-                  Grant share access in backend flow to populate this list.
-                </EmptyDescription>
-              </EmptyHeader>
-            </Empty>
-          ) : null}
-
-          {shareAccessQuery.isSuccess && shareAccessQuery.data.length > 0 ? (
-            <ul className="space-y-2">
-              {shareAccessQuery.data.map((entry) => (
-                <li key={entry.id} className="rounded-md border p-2 text-sm">
-                  {entry.email} - {entry.expiresAt ?? "No expiry"}
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </CardContent>
-      </Card>
     </div>
   );
 }

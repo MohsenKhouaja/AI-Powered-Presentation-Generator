@@ -1,17 +1,25 @@
-import { useMemo, useState, type ChangeEvent, type FormEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type DragEvent,
+  type FormEvent,
+} from "react";
 import { Link, useParams } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
   AlertCircleIcon,
-  ArrowDownIcon,
   ArrowLeftIcon,
-  ArrowUpIcon,
-  CopyIcon,
   EyeIcon,
+  GripVerticalIcon,
   PlusIcon,
   SaveIcon,
   Share2Icon,
+  Trash2Icon,
   UploadIcon,
   XIcon,
 } from "lucide-react";
@@ -28,10 +36,9 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { ThemeDropdown } from "@/components/ThemeDropdown";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { SlideThemeBoundary } from "@/components/app/SlideThemeBoundary";
 import {
   Dialog,
   DialogContent,
@@ -50,172 +57,353 @@ import {
   useUpdatePresentationMutation,
 } from "@/hooks/queries/usePresentations";
 import {
-  useGenerateShareLinkMutation,
   useInvitePresentationAccessMutation,
-  useReadOnlyShareAccessQuery,
-  useRemovePresentationAccessMutation,
 } from "@/hooks/queries/useShareReadOnly";
-
-interface EditableSlide {
-  id: string;
-  content: string;
-  slideOrder: number;
-}
+import {
+  useCreateSlideMutation,
+  useDeleteSlideMutation,
+  useGenerateSlidesFromContextMutation,
+  usePresentationSlidesQuery,
+  useReorderSlidesMutation,
+  useUpdateSlideContentMutation,
+} from "@/hooks/queries/useSlides";
 
 export function PresentationEditorPage() {
   const { id } = useParams<{ id: string }>();
   const detailQuery = usePresentationDetailQuery(id ?? null, Boolean(id));
+  const slidesQuery = usePresentationSlidesQuery(id ?? null, Boolean(id));
   const linkedContextQuery = useContextByPresentationQuery(id ?? null);
 
   const [createdContextId, setCreatedContextId] = useState<string | null>(null);
   const [promptDraft, setPromptDraft] = useState<string | null>(null);
   const [titleOverride, setTitleOverride] = useState<string | null>(null);
-  const [slidesOverride, setSlidesOverride] = useState<EditableSlide[] | null>(
-    null,
-  );
   const [selectedSlideIndex, setSelectedSlideIndex] = useState(0);
   const [isPreviewVisible, setIsPreviewVisible] = useState(true);
-  const [saveState, setSaveState] = useState<
-    "idle" | "dirty" | "saving" | "saved" | "error"
-  >("idle");
+  const [draftById, setDraftById] = useState<Record<string, string>>({});
+  const [lastSavedById, setLastSavedById] = useState<Record<string, string>>(
+    {},
+  );
+  const [isSavedVisible, setIsSavedVisible] = useState(false);
   const [editorError, setEditorError] = useState<string | null>(null);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [deletedFilesIds, setDeletedFilesIds] = useState<string[]>([]);
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteExpiresAt, setInviteExpiresAt] = useState("");
-  const [generatedShareUrl, setGeneratedShareUrl] = useState<string | null>(
-    null,
-  );
+  const [draggingSlideId, setDraggingSlideId] = useState<string | null>(null);
+  const [dragOverSlideId, setDragOverSlideId] = useState<string | null>(null);
+  const autosaveTimersRef = useRef<Record<string, number>>({});
+  const savingSlidesRef = useRef<Set<string>>(new Set());
+  const savedTimerRef = useRef<number | null>(null);
 
   const createContextMutation = useCreateContextMutation();
   const updateContextMutation = useUpdateContextMutation();
   const updatePresentationMutation = useUpdatePresentationMutation();
+  const createSlideMutation = useCreateSlideMutation(id ?? null);
+  const updateSlideMutation = useUpdateSlideContentMutation(id ?? null);
+  const deleteSlideMutation = useDeleteSlideMutation(id ?? null);
+  const reorderSlidesMutation = useReorderSlidesMutation(id ?? null);
+  const generateSlidesMutation = useGenerateSlidesFromContextMutation(
+    id ?? null,
+  );
   const activeContextId =
     createdContextId ?? linkedContextQuery.data?.id ?? null;
   const contextFilesQuery = useContextFilesQuery(
     activeContextId,
     Boolean(activeContextId),
   );
-  const shareAccessQuery = useReadOnlyShareAccessQuery(id ?? null, Boolean(id));
   const inviteAccessMutation = useInvitePresentationAccessMutation(id ?? null);
-  const removeAccessMutation = useRemovePresentationAccessMutation(id ?? null);
-  const generateShareLinkMutation = useGenerateShareLinkMutation(id ?? null);
 
-  const slides = useMemo(
-    () =>
-      slidesOverride ??
-      detailQuery.data?.slides.map((slide) => ({
+  const slides = useMemo(() => {
+    const mappedSlides =
+      slidesQuery.data?.map((slide) => ({
         id: slide.id,
-        content: slide.content,
+        content: slide.content ?? "",
         slideOrder: slide.slideOrder,
-      })) ??
-      [],
-    [slidesOverride, detailQuery.data?.slides],
-  );
+      })) ?? [];
+
+    return [...mappedSlides].sort((a, b) => a.slideOrder - b.slideOrder);
+  }, [slidesQuery.data]);
   const titleDraft = titleOverride ?? detailQuery.data?.title ?? "";
   const safeSelectedSlideIndex = Math.min(
     selectedSlideIndex,
     Math.max(slides.length - 1, 0),
   );
   const currentSlide = slides[safeSelectedSlideIndex];
-  const markdownDraft = currentSlide ? currentSlide.content : "";
+  const markdownDraft = currentSlide
+    ? draftById[currentSlide.id] ?? currentSlide.content
+    : "";
   const effectivePromptDraft =
     promptDraft ?? linkedContextQuery.data?.prompt ?? "";
 
-  const markDirty = () => {
-    setSaveState((current) => (current === "saving" ? current : "dirty"));
+  useEffect(() => {
+    if (!slidesQuery.data) {
+      return;
+    }
+
+    setDraftById((current) => {
+      const next = { ...current };
+      slidesQuery.data.forEach((slide) => {
+        if (next[slide.id] === undefined) {
+          next[slide.id] = slide.content ?? "";
+        }
+      });
+      return next;
+    });
+
+    setLastSavedById((current) => {
+      const next = { ...current };
+      slidesQuery.data.forEach((slide) => {
+        if (next[slide.id] === undefined) {
+          next[slide.id] = slide.content ?? "";
+        }
+      });
+      return next;
+    });
+  }, [slidesQuery.data]);
+
+  useEffect(() => {
+    if (slides.length === 0) {
+      setSelectedSlideIndex(0);
+      return;
+    }
+
+    setSelectedSlideIndex((current) =>
+      Math.min(current, Math.max(slides.length - 1, 0)),
+    );
+  }, [slides.length]);
+
+  useEffect(() => {
+    return () => {
+      Object.values(autosaveTimersRef.current).forEach((timer) => {
+        window.clearTimeout(timer);
+      });
+      if (savedTimerRef.current) {
+        window.clearTimeout(savedTimerRef.current);
+      }
+    };
+  }, []);
+
+  const showSavedNotice = () => {
+    setIsSavedVisible(true);
+    if (savedTimerRef.current) {
+      window.clearTimeout(savedTimerRef.current);
+    }
+    savedTimerRef.current = window.setTimeout(() => {
+      setIsSavedVisible(false);
+    }, 1500);
   };
 
-  const onPersistPresentation = async () => {
+  const saveSlideContent = async (
+    slideId: string,
+    content: string,
+    { showNotice }: { showNotice: boolean },
+  ) => {
+    if (lastSavedById[slideId] === content) {
+      return;
+    }
+    if (savingSlidesRef.current.has(slideId)) {
+      return;
+    }
+
+    savingSlidesRef.current.add(slideId);
+    setEditorError(null);
+
+    try {
+      await updateSlideMutation.mutateAsync({
+        slideId,
+        content,
+      });
+      setLastSavedById((current) => ({
+        ...current,
+        [slideId]: content,
+      }));
+      if (showNotice) {
+        showSavedNotice();
+      }
+    } catch (error) {
+      setEditorError(
+        error instanceof Error ? error.message : "Failed to save slide",
+      );
+    } finally {
+      savingSlidesRef.current.delete(slideId);
+    }
+  };
+
+  const scheduleAutosave = (slideId: string, content: string) => {
+    const existingTimer = autosaveTimersRef.current[slideId];
+    if (existingTimer) {
+      window.clearTimeout(existingTimer);
+    }
+
+    autosaveTimersRef.current[slideId] = window.setTimeout(() => {
+      void saveSlideContent(slideId, content, { showNotice: true });
+    }, 1200);
+  };
+
+  const onAddSlide = async () => {
+    try {
+      const createdSlide = await createSlideMutation.mutateAsync({
+        content: "# New Slide",
+        slideOrder: slides.length + 1,
+      });
+
+      setDraftById((current) => ({
+        ...current,
+        [createdSlide.id]: createdSlide.content ?? "",
+      }));
+      setLastSavedById((current) => ({
+        ...current,
+        [createdSlide.id]: createdSlide.content ?? "",
+      }));
+      setSelectedSlideIndex(slides.length);
+    } catch (error) {
+      setEditorError(
+        error instanceof Error ? error.message : "Failed to add slide",
+      );
+    }
+  };
+
+  const onDeleteSlide = async () => {
+    if (!currentSlide) {
+      return;
+    }
+
+    const deletingIndex = safeSelectedSlideIndex;
+
+    try {
+      await deleteSlideMutation.mutateAsync(currentSlide.id);
+      setDraftById((current) => {
+        const next = { ...current };
+        delete next[currentSlide.id];
+        return next;
+      });
+      setLastSavedById((current) => {
+        const next = { ...current };
+        delete next[currentSlide.id];
+        return next;
+      });
+      setSelectedSlideIndex(Math.max(deletingIndex - 1, 0));
+    } catch (error) {
+      setEditorError(
+        error instanceof Error ? error.message : "Failed to delete slide",
+      );
+    }
+  };
+
+  const handleDragStart =
+    (slideId: string) => (event: DragEvent<HTMLButtonElement>) => {
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("text/plain", slideId);
+      setDraggingSlideId(slideId);
+    };
+
+  const handleDragEnd = () => {
+    setDraggingSlideId(null);
+    setDragOverSlideId(null);
+  };
+
+  const onDropSlide = async (targetId: string) => {
+    if (!draggingSlideId || draggingSlideId === targetId) {
+      return;
+    }
+
+    const draggedIndex = slides.findIndex(
+      (slide) => slide.id === draggingSlideId,
+    );
+    const targetIndex = slides.findIndex((slide) => slide.id === targetId);
+
+    if (draggedIndex === -1 || targetIndex === -1) {
+      return;
+    }
+
+    const draggedSlide = slides[draggedIndex];
+    const targetSlide = slides[targetIndex];
+    const selectedId = currentSlide?.id ?? null;
+
+    try {
+      await reorderSlidesMutation.mutateAsync({
+        first: [
+          { id: draggedSlide.id, order: draggedSlide.slideOrder },
+          { id: targetSlide.id, order: targetSlide.slideOrder },
+        ],
+        second: [
+          { id: draggedSlide.id, order: targetSlide.slideOrder },
+          { id: targetSlide.id, order: draggedSlide.slideOrder },
+        ],
+      });
+
+      if (selectedId) {
+        const nextSlides = [...slides];
+        nextSlides[draggedIndex] = targetSlide;
+        nextSlides[targetIndex] = draggedSlide;
+        const nextIndex = nextSlides.findIndex(
+          (slide) => slide.id === selectedId,
+        );
+        if (nextIndex >= 0) {
+          setSelectedSlideIndex(nextIndex);
+        }
+      }
+    } catch (error) {
+      setEditorError(
+        error instanceof Error ? error.message : "Failed to reorder slides",
+      );
+    } finally {
+      setDraggingSlideId(null);
+      setDragOverSlideId(null);
+    }
+  };
+
+  const onSaveSelectedSlide = useCallback(async () => {
+    if (!currentSlide) {
+      return;
+    }
+
+    const pendingTimer = autosaveTimersRef.current[currentSlide.id];
+    if (pendingTimer) {
+      window.clearTimeout(pendingTimer);
+    }
+
+    await saveSlideContent(currentSlide.id, markdownDraft, {
+      showNotice: true,
+    });
+
     if (!id) {
       return;
     }
 
     const normalizedTitle = titleDraft.trim();
-    if (!normalizedTitle) {
-      setSaveState("error");
-      setEditorError("Presentation title is required.");
-      return;
+    if (
+      normalizedTitle &&
+      normalizedTitle !== (detailQuery.data?.title ?? "")
+    ) {
+      await updatePresentationMutation
+        .mutateAsync({
+          presentationId: id,
+          title: normalizedTitle,
+        })
+        .catch(() => undefined);
     }
+  }, [
+    currentSlide,
+    detailQuery.data?.title,
+    id,
+    markdownDraft,
+    titleDraft,
+    updatePresentationMutation,
+  ]);
 
-    setSaveState("saving");
-    setEditorError(null);
-
-    try {
-      const updated = await updatePresentationMutation.mutateAsync({
-        presentationId: id,
-        title: normalizedTitle,
-        slides: slides.map((slide, index) => ({
-          content: slide.content,
-          slideOrder: index + 1,
-        })),
-      });
-
-      setTitleOverride(updated.title);
-      setSlidesOverride(
-        updated.slides.map((slide) => ({
-          id: slide.id,
-          content: slide.content,
-          slideOrder: slide.slideOrder,
-        })),
-      );
-      setSaveState("saved");
-    } catch (error) {
-      setSaveState("error");
-      setEditorError(
-        error instanceof Error ? error.message : "Failed to save presentation",
-      );
-    }
-  };
-
-  const moveSlide = (fromIndex: number, toIndex: number) => {
-    if (toIndex < 0 || toIndex >= slides.length || fromIndex === toIndex) {
-      return;
-    }
-
-    setSlidesOverride((currentSlides) => {
-      const sourceSlides = currentSlides ?? slides;
-      const nextSlides = [...sourceSlides];
-      const [movedSlide] = nextSlides.splice(fromIndex, 1);
-      nextSlides.splice(toIndex, 0, movedSlide);
-
-      return nextSlides.map((slide, index) => ({
-        ...slide,
-        slideOrder: index + 1,
-      }));
-    });
-
-    setSelectedSlideIndex(toIndex);
-    markDirty();
-  };
-
-  const onAddSlide = () => {
-    const newSlide: EditableSlide = {
-      id: globalThis.crypto?.randomUUID?.() ?? `new-${Date.now()}`,
-      content: "# New Slide",
-      slideOrder: slides.length + 1,
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
+        event.preventDefault();
+        void onSaveSelectedSlide();
+      }
     };
 
-    setSlidesOverride((currentSlides) => [
-      ...(currentSlides ?? slides),
-      newSlide,
-    ]);
-    setSelectedSlideIndex(slides.length);
-    markDirty();
-  };
-
-  const onGenerateShareLink = async () => {
-    const result = await generateShareLinkMutation.mutateAsync();
-    setGeneratedShareUrl(result.shareUrl);
-  };
-
-  const onCopyShareLink = async () => {
-    const linkToCopy =
-      generatedShareUrl ??
-      `${window.location.origin}/shared/${detailQuery.data?.id ?? ""}`;
-    await navigator.clipboard.writeText(linkToCopy);
-  };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onSaveSelectedSlide]);
 
   const onInviteAccess = async (event: FormEvent) => {
     event.preventDefault();
@@ -272,10 +460,31 @@ export function PresentationEditorPage() {
     setDeletedFilesIds([]);
   };
 
+  const onGenerateSlides = async () => {
+    if (!activeContextId) {
+      return;
+    }
+
+    setEditorError(null);
+
+    try {
+      await generateSlidesMutation.mutateAsync({
+        contextId: activeContextId,
+      });
+      setDraftById({});
+      setLastSavedById({});
+      setSelectedSlideIndex(0);
+    } catch (error) {
+      setEditorError(
+        error instanceof Error ? error.message : "Failed to generate slides",
+      );
+    }
+  };
+
   const mutationError =
     createContextMutation.error ?? updateContextMutation.error;
 
-  if (detailQuery.isPending) {
+  if (detailQuery.isPending || slidesQuery.isPending) {
     return (
       <main className="flex min-h-screen items-center justify-center">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -285,16 +494,15 @@ export function PresentationEditorPage() {
     );
   }
 
-  if (detailQuery.isError || !detailQuery.data) {
+  if (detailQuery.isError || slidesQuery.isError || !detailQuery.data) {
+    const error = detailQuery.error ?? slidesQuery.error;
     return (
       <main className="mx-auto min-h-screen w-full max-w-3xl p-6">
         <Alert variant="destructive">
           <AlertCircleIcon />
           <AlertTitle>Failed to open editor</AlertTitle>
           <AlertDescription>
-            {detailQuery.error instanceof Error
-              ? detailQuery.error.message
-              : "Unknown error"}
+            {error instanceof Error ? error.message : "Unknown error"}
           </AlertDescription>
         </Alert>
         <Button className="mt-4" asChild>
@@ -321,7 +529,6 @@ export function PresentationEditorPage() {
               value={titleDraft}
               onChange={(event) => {
                 setTitleOverride(event.target.value);
-                markDirty();
               }}
               className="max-w-sm"
               aria-label="Presentation title"
@@ -337,20 +544,6 @@ export function PresentationEditorPage() {
               {isPreviewVisible ? "Hide Preview" : "Preview"}
             </Button>
             <Button
-              size="sm"
-              onClick={onPersistPresentation}
-              disabled={updatePresentationMutation.isPending}
-            >
-              {updatePresentationMutation.isPending ? (
-                <Spinner className="mr-1" />
-              ) : (
-                <SaveIcon className="mr-1 size-4" />
-              )}
-              {saveState === "saved" ? "Saved" : "Save"}
-            </Button>
-            <ThemeToggle />
-            <ThemeDropdown />
-            <Button
               variant="outline"
               size="sm"
               onClick={() => setIsShareDialogOpen(true)}
@@ -359,12 +552,6 @@ export function PresentationEditorPage() {
             </Button>
           </div>
         </div>
-        <div className="mt-2 text-xs text-muted-foreground">
-          {saveState === "saving" ? "Saving changes..." : null}
-          {saveState === "saved" ? "All changes saved." : null}
-          {saveState === "dirty" ? "Unsaved changes." : null}
-          {saveState === "error" ? "Save failed. Try again." : null}
-        </div>
         {editorError ? (
           <p className="mt-1 text-xs text-destructive">{editorError}</p>
         ) : null}
@@ -372,6 +559,74 @@ export function PresentationEditorPage() {
 
       <div className="grid gap-4 xl:grid-cols-[320px_1fr]">
         <aside className="space-y-4">
+          <section className="rounded-2xl border border-border bg-background">
+            <div className="border-b border-border px-3 py-2">
+              <p className="text-xs font-medium text-muted-foreground">
+                Slides
+              </p>
+            </div>
+            <div className="space-y-1 p-2" role="tablist" aria-label="Slides">
+              {generateSlidesMutation.isPending ? (
+                <div className="flex min-h-[120px] items-center justify-center">
+                  <span className="animate-pulse text-xs text-muted-foreground opacity-80">
+                    Generating slides...
+                  </span>
+                </div>
+              ) : slides.length === 0 ? (
+                <p className="px-3 py-2 text-xs text-muted-foreground">
+                  No slides yet
+                </p>
+              ) : (
+                slides.map((slide, index) => (
+                  <div
+                    key={slide.id}
+                    className={`flex h-10 items-center gap-2 rounded px-2 text-sm text-foreground transition ${
+                      draggingSlideId === slide.id
+                        ? "bg-muted shadow-[var(--shadow-subtle-2)]"
+                        : index === safeSelectedSlideIndex
+                          ? "bg-muted"
+                          : "hover:bg-muted/60"
+                    }`}
+                    onDragOver={(event) => {
+                      event.preventDefault();
+                      if (dragOverSlideId !== slide.id) {
+                        setDragOverSlideId(slide.id);
+                      }
+                    }}
+                    onDrop={() => void onDropSlide(slide.id)}
+                    onDragLeave={() => {
+                      if (dragOverSlideId === slide.id) {
+                        setDragOverSlideId(null);
+                      }
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedSlideIndex(index);
+                      }}
+                      className="flex h-8 flex-1 items-center rounded px-1 text-left"
+                      aria-selected={index === safeSelectedSlideIndex}
+                      role="tab"
+                    >
+                      <span>Slide {index + 1}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="flex h-7 items-center justify-center rounded-[12px] border border-border bg-transparent px-2 text-muted-foreground"
+                      draggable
+                      onDragStart={handleDragStart(slide.id)}
+                      onDragEnd={handleDragEnd}
+                      aria-label={`Reorder slide ${index + 1}`}
+                    >
+                      <GripVerticalIcon className="size-4" />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </section>
+
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Context</CardTitle>
@@ -467,6 +722,16 @@ export function PresentationEditorPage() {
                   )}
                   Save Context
                 </Button>
+                <Button
+                  type="button"
+                  onClick={onGenerateSlides}
+                  disabled={!activeContextId || generateSlidesMutation.isPending}
+                  className="h-9 rounded-full border border-border bg-primary px-4 py-0 text-sm font-medium text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {generateSlidesMutation.isPending
+                    ? "Generating..."
+                    : "Generate slides"}
+                </Button>
               </form>
 
               {mutationError ? (
@@ -485,12 +750,26 @@ export function PresentationEditorPage() {
 
           <Card>
             <CardHeader>
+              <CardTitle className="text-base">Theme</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Adjust the slide canvas theme without changing the editor UI.
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <ThemeToggle />
+                <ThemeDropdown />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
               <CardTitle className="text-base">Sharing</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               <p className="text-sm text-muted-foreground">
-                Manage share link and collaborators from the Share action in the
-                toolbar.
+                Invite collaborators from the Share action in the toolbar.
               </p>
               <Button
                 variant="outline"
@@ -503,53 +782,84 @@ export function PresentationEditorPage() {
           </Card>
         </aside>
 
-        <section className="grid gap-4 xl:grid-rows-[1fr_auto]">
+        <section className="grid gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-border bg-background px-4 py-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <Button type="button" size="sm" variant="ghost" onClick={onAddSlide}>
+                <PlusIcon className="mr-1 size-4" /> Add slide
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={onDeleteSlide}
+                disabled={!currentSlide || deleteSlideMutation.isPending}
+              >
+                <Trash2Icon className="mr-1 size-4" /> Delete slide
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={onSaveSelectedSlide}
+                disabled={!currentSlide || updateSlideMutation.isPending}
+              >
+                {updateSlideMutation.isPending ? (
+                  <Spinner className="mr-1 size-4" />
+                ) : (
+                  <SaveIcon className="mr-1 size-4" />
+                )}
+                Save
+              </Button>
+            </div>
+            <div className="flex items-center gap-2">
+              {isSavedVisible ? (
+                <span className="text-xs text-muted-foreground">Saved</span>
+              ) : null}
+            </div>
+          </div>
+
           <div
             className={`grid gap-4 ${isPreviewVisible ? "lg:grid-cols-2" : ""}`}
           >
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Markdown Editor</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {slides.length === 0 ? (
-                  <Empty className="border">
-                    <EmptyHeader>
-                      <EmptyMedia variant="icon">
-                        <UploadIcon className="size-4" />
-                      </EmptyMedia>
-                      <EmptyTitle>No slides found</EmptyTitle>
-                      <EmptyDescription>
-                        This presentation currently has no slides to edit.
-                      </EmptyDescription>
-                    </EmptyHeader>
-                  </Empty>
-                ) : (
-                  <Textarea
-                    value={markdownDraft}
-                    onChange={(event) => {
-                      if (!currentSlide) {
-                        return;
-                      }
-                      const nextValue = event.target.value;
-                      setSlidesOverride((currentSlides) => {
-                        const sourceSlides = currentSlides ?? slides;
-
-                        return sourceSlides.map((slide, index) =>
-                          index === safeSelectedSlideIndex
-                            ? { ...slide, content: nextValue }
-                            : slide,
-                        );
-                      });
-                      markDirty();
-                    }}
-                    rows={20}
-                    className="font-mono"
-                    aria-label="Markdown editor"
-                  />
-                )}
-              </CardContent>
-            </Card>
+            <div className="rounded-2xl bg-white p-4 shadow-[var(--shadow-subtle-7)]">
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-sm font-medium text-foreground">
+                  Markdown editor
+                </h2>
+              </div>
+              {slides.length === 0 ? (
+                <Empty className="border">
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      <UploadIcon className="size-4" />
+                    </EmptyMedia>
+                    <EmptyTitle>No slides found</EmptyTitle>
+                    <EmptyDescription>
+                      This presentation currently has no slides to edit.
+                    </EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
+              ) : (
+                <Textarea
+                  value={markdownDraft}
+                  onChange={(event) => {
+                    if (!currentSlide) {
+                      return;
+                    }
+                    const nextValue = event.target.value;
+                    setDraftById((current) => ({
+                      ...current,
+                      [currentSlide.id]: nextValue,
+                    }));
+                    scheduleAutosave(currentSlide.id, nextValue);
+                  }}
+                  rows={20}
+                  className="min-h-[480px] resize-none border-0 bg-transparent p-0 text-sm text-foreground shadow-none focus-visible:ring-0"
+                  aria-label="Markdown editor"
+                />
+              )}
+            </div>
 
             {isPreviewVisible ? (
               <Card>
@@ -557,86 +867,17 @@ export function PresentationEditorPage() {
                   <CardTitle className="text-base">Live Preview</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="min-h-[400px] rounded border p-4">
+                  <SlideThemeBoundary className="min-h-[400px] rounded border p-4">
                     <div className="prose prose-neutral max-w-none dark:prose-invert">
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>
                         {markdownDraft}
                       </ReactMarkdown>
                     </div>
-                  </div>
+                  </SlideThemeBoundary>
                 </CardContent>
               </Card>
             ) : null}
           </div>
-
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between gap-2">
-                <CardTitle className="text-base">Slide Navigator</CardTitle>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={onAddSlide}
-                >
-                  <PlusIcon className="mr-1 size-4" /> Add Slide
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div
-                className="flex flex-wrap items-center gap-2"
-                role="tablist"
-                aria-label="Slides"
-              >
-                {slides.map((slide, index) => (
-                  <div
-                    key={slide.id}
-                    className="flex items-center gap-1 rounded-md border px-2 py-1"
-                  >
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedSlideIndex(index);
-                      }}
-                      className="rounded-md px-2 py-1 text-xs hover:bg-muted"
-                      aria-selected={index === selectedSlideIndex}
-                      role="tab"
-                    >
-                      <span>Slide {index + 1}</span>
-                      {index === selectedSlideIndex ? (
-                        <Badge className="ml-2">Active</Badge>
-                      ) : null}
-                    </button>
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => moveSlide(index, index - 1)}
-                      disabled={index === 0}
-                      aria-label={`Move slide ${index + 1} up`}
-                    >
-                      <ArrowUpIcon className="size-3" />
-                    </Button>
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => moveSlide(index, index + 1)}
-                      disabled={index === slides.length - 1}
-                      aria-label={`Move slide ${index + 1} down`}
-                    >
-                      <ArrowDownIcon className="size-3" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-              <Separator className="my-3" />
-              <p className="text-xs text-muted-foreground">
-                Slide changes persist when you click Save.
-              </p>
-            </CardContent>
-          </Card>
         </section>
       </div>
 
@@ -645,97 +886,11 @@ export function PresentationEditorPage() {
           <DialogHeader>
             <DialogTitle>Share Presentation</DialogTitle>
             <DialogDescription>
-              Generate a share link, invite collaborators, and manage existing
-              access.
+              Invite collaborators with edit access.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-3">
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Shareable link</p>
-              <div className="flex gap-2">
-                <Input
-                  readOnly
-                  value={
-                    generatedShareUrl ??
-                    `${window.location.origin}/shared/${detailQuery.data.id}`
-                  }
-                  aria-label="Shareable link"
-                />
-                <Button
-                  variant="outline"
-                  type="button"
-                  onClick={onGenerateShareLink}
-                  disabled={generateShareLinkMutation.isPending}
-                >
-                  {generateShareLinkMutation.isPending ? <Spinner /> : null}
-                  Generate
-                </Button>
-                <Button
-                  variant="outline"
-                  type="button"
-                  onClick={onCopyShareLink}
-                >
-                  <CopyIcon className="mr-1 size-4" /> Copy
-                </Button>
-              </div>
-            </div>
-
-            <Separator />
-
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Collaborators</p>
-              {shareAccessQuery.isPending ? (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Spinner /> Loading access list...
-                </div>
-              ) : null}
-
-              {shareAccessQuery.isError ? (
-                <p className="text-sm text-destructive">
-                  {shareAccessQuery.error instanceof Error
-                    ? shareAccessQuery.error.message
-                    : "Failed to load share access"}
-                </p>
-              ) : null}
-
-              {shareAccessQuery.isSuccess &&
-              shareAccessQuery.data.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  No collaborators yet.
-                </p>
-              ) : null}
-
-              {shareAccessQuery.isSuccess && shareAccessQuery.data.length > 0
-                ? shareAccessQuery.data.map((entry) => (
-                    <div
-                      key={entry.id}
-                      className="flex items-center justify-between rounded border px-2 py-2 text-xs"
-                    >
-                      <div>
-                        <p>{entry.email}</p>
-                        <p className="text-muted-foreground">
-                          {entry.expiresAt
-                            ? new Date(entry.expiresAt).toLocaleString()
-                            : "No expiration"}
-                        </p>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        type="button"
-                        onClick={() => removeAccessMutation.mutate(entry.id)}
-                        disabled={removeAccessMutation.isPending}
-                      >
-                        Remove
-                      </Button>
-                    </div>
-                  ))
-                : null}
-            </div>
-
-            <Separator />
-
             <form className="space-y-2" onSubmit={onInviteAccess}>
               <p className="text-sm font-medium">Invite collaborator</p>
               <Input
