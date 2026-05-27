@@ -29,10 +29,7 @@ export function PresentationViewerPage() {
   const slidesQuery = usePresentationSlidesQuery(id ?? null, Boolean(id));
   const [slideIndex, setSlideIndex] = useState(0);
 
-  const slides = useMemo(
-    () => slidesQuery.data ?? [],
-    [slidesQuery.data],
-  );
+  const slides = useMemo(() => slidesQuery.data ?? [], [slidesQuery.data]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {

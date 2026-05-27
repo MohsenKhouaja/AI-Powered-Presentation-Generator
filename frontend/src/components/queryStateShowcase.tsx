@@ -219,7 +219,6 @@ export function QueryStateShowcase() {
           </CardContent>
         </Card>
       </div>
-
     </div>
   );
 }

@@ -38,10 +38,10 @@ export function DashboardPage() {
   const deleteMutation = useDeletePresentationMutation();
   const presentations = presentationsQuery.data ?? [];
   const ownedPresentations = presentations.filter(
-    (presentation) => presentation.AccessType === "own"
+    (presentation) => presentation.AccessType === "own",
   );
   const editablePresentations = presentations.filter(
-    (presentation) => presentation.AccessType === "edit"
+    (presentation) => presentation.AccessType === "edit",
   );
 
   const onCreate = async (event: FormEvent) => {
@@ -157,7 +157,8 @@ export function DashboardPage() {
                     </CardHeader>
                     <CardContent>
                       <p className="text-sm text-muted-foreground">
-                        Created {new Date(presentation.createdAt).toLocaleString()}
+                        Created{" "}
+                        {new Date(presentation.createdAt).toLocaleString()}
                       </p>
                       <Badge variant="outline" className="mt-2">
                         Owner
@@ -165,7 +166,9 @@ export function DashboardPage() {
                     </CardContent>
                     <CardFooter className="flex flex-wrap gap-2">
                       <Button asChild size="sm" variant="outline">
-                        <Link to={`/presentations/${presentation.id}`}>View</Link>
+                        <Link to={`/presentations/${presentation.id}`}>
+                          View
+                        </Link>
                       </Button>
                       <Button asChild size="sm" variant="outline">
                         <Link to={`/presentations/${presentation.id}/edit`}>
@@ -222,7 +225,8 @@ export function DashboardPage() {
                     </CardHeader>
                     <CardContent>
                       <p className="text-sm text-muted-foreground">
-                        Created {new Date(presentation.createdAt).toLocaleString()}
+                        Created{" "}
+                        {new Date(presentation.createdAt).toLocaleString()}
                       </p>
                       <Badge variant="outline" className="mt-2">
                         Shared edit
@@ -230,7 +234,9 @@ export function DashboardPage() {
                     </CardContent>
                     <CardFooter className="flex flex-wrap gap-2">
                       <Button asChild size="sm" variant="outline">
-                        <Link to={`/presentations/${presentation.id}`}>View</Link>
+                        <Link to={`/presentations/${presentation.id}`}>
+                          View
+                        </Link>
                       </Button>
                       <Button asChild size="sm" variant="outline">
                         <Link to={`/presentations/${presentation.id}/edit`}>

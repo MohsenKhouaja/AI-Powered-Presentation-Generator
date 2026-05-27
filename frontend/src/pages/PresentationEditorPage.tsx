@@ -56,9 +56,7 @@ import {
   usePresentationDetailQuery,
   useUpdatePresentationMutation,
 } from "@/hooks/queries/usePresentations";
-import {
-  useInvitePresentationAccessMutation,
-} from "@/hooks/queries/useShareReadOnly";
+import { useInvitePresentationAccessMutation } from "@/hooks/queries/useShareReadOnly";
 import {
   useCreateSlideMutation,
   useDeleteSlideMutation,
@@ -131,7 +129,7 @@ export function PresentationEditorPage() {
   );
   const currentSlide = slides[safeSelectedSlideIndex];
   const markdownDraft = currentSlide
-    ? draftById[currentSlide.id] ?? currentSlide.content
+    ? (draftById[currentSlide.id] ?? currentSlide.content)
     : "";
   const effectivePromptDraft =
     promptDraft ?? linkedContextQuery.data?.prompt ?? "";
@@ -725,7 +723,9 @@ export function PresentationEditorPage() {
                 <Button
                   type="button"
                   onClick={onGenerateSlides}
-                  disabled={!activeContextId || generateSlidesMutation.isPending}
+                  disabled={
+                    !activeContextId || generateSlidesMutation.isPending
+                  }
                   className="h-9 rounded-full border border-border bg-primary px-4 py-0 text-sm font-medium text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {generateSlidesMutation.isPending
@@ -785,7 +785,12 @@ export function PresentationEditorPage() {
         <section className="grid gap-4">
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-border bg-background px-4 py-2">
             <div className="flex flex-wrap items-center gap-2">
-              <Button type="button" size="sm" variant="ghost" onClick={onAddSlide}>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={onAddSlide}
+              >
                 <PlusIcon className="mr-1 size-4" /> Add slide
               </Button>
               <Button

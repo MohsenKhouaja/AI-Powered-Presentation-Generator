@@ -14,7 +14,10 @@ export function SlideThemeBoundary({
   const { theme, tone } = useTheme();
 
   return (
-    <div data-theme={theme} className={cn(tone === "dark" ? "dark" : "", className)}>
+    <div
+      data-theme={theme}
+      className={cn(tone === "dark" ? "dark" : "", className)}
+    >
       {children}
     </div>
   );
