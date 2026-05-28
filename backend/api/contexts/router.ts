@@ -41,9 +41,6 @@ const serializeFilesForInsert = (
 contextsRouter.get("/contexts/:id", async (req, res) => {
   const contextId = req.params.id as unknown as UUID;
   const context = await contextService.findOne(db, contextId);
-  if (!context) {
-    return res.status(404).json({ message: "Context not found" });
-  }
   res.json(context);
 });
 
@@ -51,11 +48,19 @@ contextsRouter.post(
   "/contexts",
   upload.array("files", 50),
   async (req, res) => {
-    const prompt = req.body?.prompt ?? "";
+    const prompt = req.body?.prompt ?? null;
+    const presentationId = req.body?.presentationId ?? null;
+    if (!prompt || !presentationId) {
+      throw new Error("prompt and presentationId are required");
+    }
     const newFiles = serializeFilesForInsert(
       req.files as Express.Multer.File[],
     );
-    const createdContext = await contextService.create(db, prompt, newFiles);
+    const createdContext = await contextService.create(
+      db,
+      { prompt, presentationId },
+      newFiles,
+    );
     res.status(201).json(createdContext);
   },
 );

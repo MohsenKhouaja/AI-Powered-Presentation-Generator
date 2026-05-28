@@ -48,11 +48,12 @@ function SearchResults() {
   const handleSearch = (value: string) => {
     setQuery(value) // Update input immediately
     
-    startTransition(async () => {
-      // Fetch and update results
-      const data = await fetchResults(value)
-      setResults(data)
-    })
+    startTransition(() => {
++     // Trigger async fetch, then update state
++     fetchResults(value).then(data => {
++       setResults(data)
++     })
++   })
   }
 
   return (

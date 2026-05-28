@@ -8,7 +8,6 @@ import { UPLOAD_PATH } from "../../config/uploads.js";
 import type { FileRow, NewFileRow } from "../../database/types.js";
 
 const createMany = async (db: DBContext, files: NewFileRow[]) => {
-  if (files.length === 0) return [];
   await db.insert(filesTable).values(files);
 };
 

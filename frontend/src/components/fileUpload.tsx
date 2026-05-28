@@ -1,5 +1,5 @@
 import { File as FileIcon, FileSpreadsheet, X } from "lucide-react";
-import { type ChangeEvent, type DragEvent, useRef, useState } from "react";
+import { type ChangeEvent, type DragEvent, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,16 @@ export default function FileUpload04() {
   });
   const [showDummy, setShowDummy] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const intervalRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, []);
 
   const validFileTypes = [
     "text/csv",
@@ -31,11 +41,12 @@ export default function FileUpload04() {
     if (validFileTypes.includes(file.type)) {
       setUploadState({ file, progress: 0, uploading: true });
 
-      const interval = setInterval(() => {
+      intervalRef.current = window.setInterval(() => {
         setUploadState((prev) => {
           const newProgress = prev.progress + 5;
           if (newProgress >= 100) {
-            clearInterval(interval);
+            if (intervalRef.current) clearInterval(intervalRef.current);
+            intervalRef.current = null;
             return { ...prev, progress: 100, uploading: false };
           }
           return { ...prev, progress: newProgress };
@@ -59,6 +70,10 @@ export default function FileUpload04() {
   };
 
   const resetFile = () => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
     setUploadState({ file: null, progress: 0, uploading: false });
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
