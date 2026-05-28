@@ -1,0 +1,426 @@
+\documentclass[10pt,a4paper]{article}
+
+\usepackage[a4paper, top=2cm, bottom=2cm, left=2.4cm, right=2.4cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{setspace}
+\usepackage{parskip}
+\usepackage{titlesec}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{tocloft}
+\usepackage{mdframed}
+\usepackage{multicol}
+\usepackage{float}
+
+% Colors
+\definecolor{primary}{RGB}{4, 71, 255}
+\definecolor{codebg}{RGB}{245, 246, 248}
+\definecolor{codefg}{RGB}{30, 30, 30}
+\definecolor{lightgray}{RGB}{240, 240, 240}
+\definecolor{medgray}{RGB}{130, 130, 130}
+\definecolor{accent}{RGB}{255, 71, 4}
+
+% Hyperref
+\hypersetup{colorlinks=true, linkcolor=primary, urlcolor=primary, citecolor=primary}
+
+% Section formatting
+\titleformat{\section}{\large\bfseries\color{black}}{}{0em}{\thesection.\enspace}[\vspace{-0.4em}\textcolor{primary}{\rule{\linewidth}{1.2pt}}]
+\titleformat{\subsection}{\normalsize\bfseries}{}{0em}{\thesubsection\enspace}
+\titleformat{\subsubsection}{\normalsize\itshape}{}{0em}{\thesubsubsection\enspace}
+\titlespacing{\section}{0pt}{1.3em}{0.5em}
+\titlespacing{\subsection}{0pt}{0.8em}{0.2em}
+\titlespacing{\subsubsection}{0pt}{0.5em}{0.1em}
+
+% TOC styling
+\renewcommand{\cftsecfont}{\bfseries}
+\renewcommand{\cftsecpagefont}{\bfseries}
+\setlength{\cftbeforesecskip}{4pt}
+
+% Code listing style
+\lstset{
+  backgroundcolor=\color{codebg},
+  basicstyle=\ttfamily\small\color{codefg},
+  breaklines=true,
+  frame=single,
+  framesep=5pt,
+  rulecolor=\color{lightgray},
+  xleftmargin=10pt,
+  xrightmargin=10pt,
+  aboveskip=4pt,
+  belowskip=4pt,
+  showstringspaces=false,
+  tabsize=2,
+  commentstyle=\color{medgray},
+  keywordstyle=\color{primary}\bfseries,
+}
+
+% Highlighted box
+\newmdenv[
+  backgroundcolor=codebg,
+  linecolor=primary,
+  linewidth=1.5pt,
+  leftline=true, rightline=false, topline=false, bottomline=false,
+  innerleftmargin=10pt,
+  innertopmargin=6pt,
+  innerbottommargin=6pt,
+]{keybox}
+
+% Header/footer
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancyhead[L]{\small\textcolor{medgray}{P2M --- Prompt-to-Markdown Presentation Platform}}
+\fancyhead[R]{\small\textcolor{medgray}{May 2026}}
+\fancyfoot[C]{\small\thepage}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.4em}
+\setstretch{1.25}
+
+\begin{document}
+
+%% ─── TITLE PAGE ─────────────────────────────────────────────────────────────
+\thispagestyle{empty}
+\vspace*{0.8cm}
+
+\begin{flushleft}
+  {\fontsize{22}{28}\bfseries P2M}\\[0.3em]
+  {\fontsize{13}{16}\bfseries Prompt-to-Markdown Presentation Platform}\\[1em]
+  \textcolor{primary}{\rule{6cm}{1.5pt}}\\[1em]
+  {\large Technical Architecture \& Implementation Report}\\[0.5em]
+  {\normalsize\textcolor{medgray}{May 2026 \quad|\quad Active Development}}
+\end{flushleft}
+
+\vspace{1cm}
+
+\begin{mdframed}[backgroundcolor=codebg, linecolor=lightgray, linewidth=1pt, innerleftmargin=14pt, innerrightmargin=14pt, innertopmargin=10pt, innerbottommargin=10pt]
+\textbf{Abstract}\\[0.4em]
+P2M is a web-based presentation platform that inverts the typical slide-creation workflow: instead of positioning elements in a visual editor, authors write Markdown and let a theming engine handle the rest. An integrated AI layer --- powered by Groq's \texttt{llama-3.1-70b-versatile} --- can generate a complete, structured slide deck from a natural-language prompt, optionally grounded in uploaded reference documents. This report describes the architecture, implementation decisions, and current state of the platform.
+\end{mdframed}
+
+\vspace{0.8cm}
+\tableofcontents
+
+\newpage
+
+%% ─── SECTION 1 ───────────────────────────────────────────────────────────────
+\section{Context and Objectives}
+
+\subsection{The Problem with Existing Tools}
+
+Building a slide deck is, in theory, a writing task. In practice, it rarely feels that way. Tools like PowerPoint and Google Slides pull you into a design task instead --- nudging text boxes, adjusting font sizes, cycling through layout menus --- before you have written a single sentence worth keeping. The content and the formatting compete for your attention, and formatting usually wins.
+
+The cost is not only cognitive. Slides produced by traditional tools carry structural problems that compound over time:
+
+\begin{itemize}[noitemsep, topsep=4pt]
+  \item \textbf{Locked-in formats.} Binary formats (\texttt{.pptx}, \texttt{.key}) resist version control, automated processing, and content reuse. Extracting or transforming slide content programmatically requires specialized parsing libraries.
+  \item \textbf{Collaboration friction.} Concurrent editing has improved over the years, but sharing editing access, managing versions, and coordinating who is working on which slide remains clunky compared to text-based workflows.
+  \item \textbf{Accessibility gaps.} Visual-first authoring often produces decks that are hard to navigate with assistive technologies, particularly when formatting is applied manually rather than through semantic structure.
+  \item \textbf{Repetition.} Any presenter who has ever reformatted twenty slides to match a new template understands this frustration.
+\end{itemize}
+
+Tools like Marp and Slidev take the right approach but aim squarely at developers. They require a local setup, a terminal, and a tolerance for configuration files. P2M tries to close that gap. Same content-first philosophy, delivered as a web application that does not ask anything technical from the author.
+
+\subsection{Project Objectives}
+
+P2M was designed around six concrete goals:
+
+\begin{enumerate}[noitemsep, topsep=4pt]
+  \item \textbf{Content-Visual Separation.} Authors write Markdown; the platform handles visual presentation through a theming engine. No manual formatting, no layout management.
+  \item \textbf{AI-Augmented Authoring.} Users can describe a presentation in natural language and receive a fully structured deck in seconds. Reference documents (PDFs, text files) can be provided as additional context.
+  \item \textbf{Real-Time Preview.} A split-pane editor where Markdown changes are reflected instantly on a rendered slide preview.
+  \item \textbf{Collaborative Access Control.} Owners can grant edit access to other users, with an optional expiry timestamp for time-limited collaboration.
+  \item \textbf{Presentation Mode.} A fullscreen, keyboard-navigable slide viewer suitable for live presentations.
+  \item \textbf{Extensible Theming.} 25 visual themes applicable globally, scoped to slide content so the application shell is not affected.
+\end{enumerate}
+
+\subsection{Target Users}
+
+\begin{table}[h!]
+\centering
+\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{@{} >{\bfseries}l X X @{}}
+\toprule
+Persona & Primary Use Case & Key Features \\
+\midrule
+Individual Presenter   & Creating and delivering solo presentations & Markdown editor, AI generation, viewer, themes \\
+Team Collaborator      & Co-authoring with colleagues               & Sharing system, email-based access grants \\
+Educator / Creator     & Producing content at scale                 & AI generation from source documents, bulk output \\
+\bottomrule
+\end{tabularx}
+\vspace{-0.5em}\caption{Primary user personas and their interaction with the platform}
+\end{table}
+
+Success is measured across four dimensions: functional completeness (full CRUD), AI generation quality (valid and relevant output), performance (render $<$5\,s, generation $<$15\,s), and extensibility (new theme = one CSS file, no component changes).
+
+%% ─── SECTION 2 ───────────────────────────────────────────────────────────────
+\section{Conception and Architecture}
+
+\subsection{Architectural Philosophy}
+
+P2M is structured as a \textbf{service-oriented monorepo}. Two independently deployable units --- a backend API server and a frontend SPA --- share a single repository managed via npm workspaces. It is a deliberate middle ground: a monolith would couple the two sides too tightly, while full microservices would add operational overhead that is simply not justified at this scale. Neither side knows about the other's internals. The backend exposes a JSON API; the frontend consumes it.
+
+
+\subsection{System Architecture Overview}
+
+\begin{lstlisting}[language={}, title={Simplified system layout}]
+Client Browser (React SPA)
+  |-- Landing / Auth        Dashboard        Presentation Editor
+  |-- Slide Viewer          Shared Read-Only  Theme Settings
+       |
+       | HTTP / JSON  (Authorization: Bearer <JWT>)
+       v
+Express 5 API Server
+  |-- Auth Routes       (/api/auth/*)       [public]
+  |-- Auth Middleware   (JWT verification)  [all protected routes]
+  |-- API Router        (/api/*)
+       |-- presentations-service  <---> MySQL  (Drizzle ORM)
+       |-- slides-service         <---> MySQL + MongoDB + Groq API
+       |-- contexts-service       <---> MySQL + disk (multer)
+       |-- users-service          <---> MySQL
+       |-- files-service          <---> disk
+\end{lstlisting}
+
+\subsection{Technology Choices}
+
+\subsubsection{Backend}
+
+\begin{table}[H]
+\centering\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{@{} l l X @{}}
+\toprule
+\textbf{Component} & \textbf{Technology} & \textbf{Rationale} \\
+\midrule
+Runtime        & Node.js 22 (ESM)    & Async-native, excellent package ecosystem \\
+Framework      & Express 5           & Minimal middleware model; NestJS overhead unnecessary here \\
+Language       & TypeScript 5.9      & Compile-time type safety, editor intelligence \\
+Dev Runner     & tsx                 & Zero-config TypeScript execution, no build step during dev \\
+MySQL ORM      & Drizzle ORM         & Lightweight, SQL-like syntax, excellent TS inference \\
+MongoDB        & Native Driver       & Direct control; no ODM overhead for simple document CRUD \\
+Auth           & jsonwebtoken        & Industry-standard JWT; symmetric RS256 \\
+File Uploads   & multer              & De facto standard for multipart/form-data in Express \\
+AI             & Groq API            & Fast inference ($\sim$500 tok/s), generous free tier \\
+\bottomrule
+\end{tabularx}
+\vspace{-0.5em}\caption{Backend technology stack}
+\end{table}
+
+\subsubsection{Frontend}
+
+\begin{table}[H]
+\centering\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{@{} l l X @{}}
+\toprule
+\textbf{Component} & \textbf{Technology} & \textbf{Rationale} \\
+\midrule
+UI Library     & React 19              & Concurrent features, mature ecosystem \\
+Bundler        & Vite 7                & Sub-second HMR, native ESM \\
+CSS            & Tailwind CSS 4        & Utility-first, Oxide engine, zero runtime \\
+Routing        & react-router-dom 7    & Nested routes, loader/action pattern \\
+Server State   & TanStack Query 5      & Declarative fetching, caching, optimistic updates \\
+Components     & shadcn/ui (53)        & Accessible (Radix-based), copy-paste ownership model \\
+Forms          & react-hook-form + zod & Uncontrolled, performant, type-safe validation \\
+Markdown       & react-markdown        & AST-based, extensible via remark/rehype plugins \\
+Animation      & Motion (Framer v12)   & Layout animations for drag-to-reorder \\
+\bottomrule
+\end{tabularx}
+\vspace{-0.5em}\caption{Frontend technology stack}
+\end{table}
+
+\subsection{Database Architecture}
+
+The data model spans two database systems, each used for what it does well.
+
+\subsubsection{MySQL --- Relational Data}
+
+Six tables with foreign key constraints and cascading deletes:
+
+\begin{lstlisting}[language={}, title={MySQL schema (abbreviated)}]
+users            id (UUID PK), username, email, password (scrypt)
+presentations    id, title, user_id (FK -> users), created_at
+slides           id (UUID PK = MongoDB _id), presentation_id (FK), slide_order
+contexts         id, prompt, presentation_id (FK, UNIQUE)  -- one-to-one
+files            id, context_id (FK), file_name, mime_type, size_bytes
+edit_access      id, user_id (FK), presentation_id (FK), expires_at (nullable)
+\end{lstlisting}
+
+All primary keys are UUIDs. This prevents sequential ID enumeration in URLs and enables distributed ID generation without coordination. There is also a subtler benefit: the \texttt{slides.id} UUID is shared with the MongoDB document \texttt{\_id}, creating a cross-database reference with no foreign key required.
+
+Cascading deletes handle cleanup automatically. Remove a presentation, and the database takes care of its slides, context, files, and access records. No multi-step application logic, no risk of orphaned rows.
+
+\subsubsection{MongoDB --- Document Storage}
+
+A single \texttt{slides\_content} collection:
+
+\begin{lstlisting}[language={}]
+{ _id: string,        // matches MySQL slides.id
+  slide_content: string }  // raw Markdown body
+\end{lstlisting}
+
+The decision to separate slide content into MongoDB is practical. Markdown length varies unpredictably, writes are frequent and append-heavy, and content is always fetched by ID with no relational join needed. MongoDB handles all of that naturally. Avoiding a VARCHAR limit is a minor bonus.
+
+The tradeoff is real, though. There is no database-enforced referential integrity across the two systems --- a MySQL row can exist without its MongoDB counterpart, and vice versa. The application wraps cross-database operations in sequences to manage this, but a production deployment would need reconciliation logic to survive partial writes or mid-operation crashes.
+
+\subsection{Authentication Design}
+
+Authentication uses a two-token strategy to balance security and usability:
+
+\begin{table}[h!]
+\centering\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{@{} l l l X @{}}
+\toprule
+\textbf{Token} & \textbf{Lifetime} & \textbf{Storage} & \textbf{Purpose} \\
+\midrule
+Access Token   & 15 minutes & Frontend memory      & Authorizes every API request \\
+Refresh Token  & 30 days    & httpOnly cookie      & Silently obtains new access tokens \\
+\bottomrule
+\end{tabularx}
+\vspace{-0.5em}\caption{Token strategy}
+\end{table}
+
+Passwords are hashed with \texttt{scrypt} and a random 16-byte salt. Login comparisons go through \texttt{crypto.}\allowbreak\texttt{timingSafeEqual} to prevent timing attacks --- a small detail, but the right one. On the frontend, the \texttt{Auth}\allowbreak\texttt{Provider} intercepts every 401 response, calls the refresh endpoint silently using the httpOnly cookie, and retries the original request. Token expiry is invisible to the user.
+
+%% ─── SECTION 3 ───────────────────────────────────────────────────────────────
+\section{Solution and Implementation}
+
+\subsection{Backend API Structure}
+
+Every entity group follows the same two-file pattern. A \textbf{router} handles HTTP concerns --- parsing the request, checking ownership, formatting the response. A \textbf{service} file holds the actual logic and database queries. It is a simple convention, but it means any service can be tested in isolation without mocking an HTTP layer.
+
+The API exposes 15+ endpoints across six entity groups:
+
+\begin{keybox}
+\small\textbf{Route inventory:}
+\begin{itemize}[leftmargin=*, noitemsep, topsep=3pt]
+  \item \texttt{GET/POST/PUT/DELETE /presentation[s]/:id} --- full CRUD
+  \item \texttt{POST/PUT/DELETE /presentations/:id/slides/:sid} --- slide management
+  \item \texttt{POST .../slides/generate} --- AI generation
+  \item \texttt{PUT .../slides/order} --- batch reorder
+  \item \texttt{POST /contexts}, \texttt{PUT /contexts/:id} --- prompt + file upload
+  \item \texttt{POST /presentations/:id/access} --- grant edit access
+\end{itemize}
+\end{keybox}
+
+\subsection{AI Slide Generation Pipeline}
+
+This is the feature the platform is built around. Everything else --- the editor, the viewer, the sharing system --- supports it. The full pipeline lives in a single service function in \texttt{slides-service.ts}:
+
+\begin{enumerate}[noitemsep, topsep=4pt]
+  \item \textbf{Collect context.} Read the context row associated with the presentation --- user prompt text and references to uploaded files.
+  \item \textbf{Encode files.} Read each file from disk, encode as base64, truncate to 50\,KB per file to stay within model token limits.
+  \item \textbf{Build the system prompt.} A structured instruction that tells the model to produce slides with a heading, bullet points or paragraphs, and fenced code blocks where appropriate, formatted as JSON.
+\item \textbf{Send to Groq API.} A single \texttt{fetch()} call to \texttt{/v1/chat/completions} using the \texttt{llama-3.1-}\allowbreak\texttt{70b-versatile} model.
+  \item \textbf{Parse and validate.} Expects \texttt{\{"slides": [\{"markdown": "..."\}]\}}. If the response is not valid JSON or the schema is wrong, an error is thrown.
+  \item \textbf{Atomic replacement.} Within a MySQL transaction: delete all existing slide rows, delete the corresponding MongoDB documents, insert the new slides with sequential \texttt{slide\_order} values, insert matching MongoDB documents.
+\end{enumerate}
+
+The model runs at \texttt{temperature: 0.7} with \texttt{max\_tokens: 4096} --- enough headroom for a full deck, constrained enough to stay coherent. If the response comes back malformed, the error propagates to the global handler and surfaces as a toast on the frontend. No silent failures.
+
+\subsection{Frontend Architecture}
+
+\subsubsection{State Management and Routing}
+
+Eight pages, two route guards. \texttt{PublicOnly}\allowbreak\texttt{Route} wraps the login and register pages and redirects authenticated users away; \texttt{Authenticated}\allowbreak\texttt{Route} does the reverse for everything else. The viewer and read-only pages are unguarded. State splits cleanly into three layers: \textbf{server state} via TanStack React Query 5, which is the single source of truth for all fetched data; \textbf{auth state} via React Context; and \textbf{UI state} in local \texttt{useState}. Query keys live in one file (\texttt{lib/queryKeys.ts}), and every mutation invalidates the relevant cache on success.
+
+\subsubsection{The Presentation Editor}
+
+The \texttt{Presentation}\allowbreak\texttt{EditorPage} is the most complex component in the codebase --- around 926 lines. It is built from four distinct areas:
+
+\textbf{Slide Sidebar} --- A vertical list of mini-previews on the left. Click to select, drag to reorder. Motion handles the animation; a batched \texttt{PUT} request syncs the new order server-side.
+
+\textbf{Context Panel} --- A collapsible side panel where the AI prompt lives. It holds a textarea, a drag-and-drop file upload zone, a deletable list of uploaded files, and the Generate button. The upload route (\texttt{POST} or \texttt{PUT /contexts/:id}) depends on whether a context already exists for this presentation.
+
+\textbf{Editor / Preview Split} --- The main work area. A resizable split pane puts the Markdown textarea on the left and a live \texttt{react-markdown} preview on the right. Auto-save runs on a 1.2-second debounce --- each keystroke schedules a \texttt{PUT} to MongoDB, which on success invalidates the cache and flips the indicator to "Saved".
+
+\textbf{Theme Selector and Share Dialog} --- A dropdown lists all 25 themes; selecting one sets a \texttt{data-theme} attribute on the preview container. A modal dialog accepts an email address to grant edit access, calling \texttt{POST /presentations/:id/access}.
+
+\subsubsection{Theming System}
+
+Each of the 25 themes is a self-contained CSS file in \texttt{src/themes/}, scoped entirely through \texttt{[data-theme=}\allowbreak\texttt{"name"]} attribute selectors. The \texttt{Slide}\allowbreak\texttt{ThemeBoundary} component sets the attribute on the slide canvas and nothing else --- the application shell never sees the theme change. Colors use the \texttt{oklch} color space for perceptually uniform scaling across the palette.
+
+The practical benefit is zero coupling. Adding a new theme means writing one CSS file and one entry in \texttt{lib/themes.ts}. No components change, no build step involved.
+
+
+\subsection{Infrastructure and Development Workflow}
+
+Getting the environment running takes one command: \texttt{docker compose up} starts MongoDB. MySQL runs externally. Drizzle Kit handles migrations (\texttt{db:generate} to diff the schema, \texttt{db:migrate} to apply). Files are stored on disk with UUID-based names via multer and base64-encoded at generation time, capped at 50\,KB per file to stay within token limits. A seed script (\texttt{tsx scripts/seed.ts}) fills the database with three users, a handful of presentations, and cross-user access grants. The \texttt{--reset} flag tears it all down in dependency order.
+
+%% ─── SECTION 4 ───────────────────────────────────────────────────────────────
+\section{Results and Conclusion}
+
+\subsection{Current State Assessment}
+
+The platform works end-to-end. Every primary user journey --- registering, creating a presentation, generating slides from a prompt, editing in Markdown, applying a theme, sharing with a collaborator, presenting fullscreen --- is implemented and functional.
+
+\begin{table}[h!]
+\centering\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{@{} l X @{}}
+\toprule
+\textbf{Dimension} & \textbf{Status} \\
+\midrule
+API endpoints          & 15+ across 6 entity groups \\
+Frontend pages         & 8 \\
+UI components (shadcn) & 53 \\
+Visual themes          & 25 CSS files \\
+MySQL tables           & 6 \\
+MongoDB collections    & 1 (\texttt{slides\_content}) \\
+AI model               & \texttt{llama-3.1-70b-versatile} via Groq \\
+Auth tokens            & 2 (access: 15 min, refresh: 30 days) \\
+Backend packages       & $\sim$30 npm dependencies \\
+Frontend packages      & $\sim$70 npm dependencies \\
+\bottomrule
+\end{tabularx}
+\vspace{-0.5em}\caption{Current platform metrics}
+\end{table}
+
+\textbf{What is complete:} full CRUD for all entities; JWT auth with transparent refresh; AI generation from prompt and files; 25 themes; real-time editor with auto-save; collaborative access grants; fullscreen keyboard-driven viewer; file upload; Drizzle migrations; dev seeder.
+
+
+\subsection{Architecture Assessment}
+
+\textbf{What Worked Well}\par
+
+The dual-database approach held up. MySQL does what relational databases are good at --- integrity constraints, cascading operations, structured queries. MongoDB absorbs slide content without any schema friction. The shared UUID linking the two is simple, obvious, and has caused no operational issues.
+
+The theming architecture was one of the better early decisions. Pure CSS, zero JavaScript, completely isolated from component logic. A designer can ship a new theme without reading a single line of application code. That kind of separation pays dividends throughout development.
+
+React Query for server state and React Context for auth and UI concerns give the frontend a clear, predictable data flow. And the dev setup is genuinely fast --- \texttt{docker compose up}, install, run, done in under five minutes.
+
+
+\subsection{Lessons Learned}
+
+\begin{itemize}[topsep=3pt, noitemsep]
+  \item \textbf{ESM import friction.} Node.js ESM requires \texttt{.js} extensions on all relative TypeScript imports. It is technically correct but deeply counterintuitive, and it caused recurring errors. Document it from day one.
+  \item \textbf{LLM output is not always well-formed.} The pipeline assumes valid JSON. In practice, models occasionally produce malformed output near token limits --- a retry mechanism and a fallback extraction strategy should be added.
+  \item \textbf{Cross-database sequencing.} No transaction spans both MySQL and MongoDB. A crash between the two writes leaves the data inconsistent. Compensating logic or a periodic reconciliation job would be needed in production.
+  \item \textbf{Monorepo complexity grows.} TypeScript path resolution and type sharing get harder as the project scales. Keeping types inline was pragmatic for now, but will need revisiting.
+\end{itemize}
+
+\subsection{Recommendations}
+
+\textbf{Short-term:} add Vitest unit tests for service logic and Playwright tests for the three core flows; implement typed error classes so the global handler returns correct status codes; add Zod validation to all backend request bodies; standardize route naming to plural throughout.
+
+\textbf{Medium-term:} migrate file storage to S3 or MinIO; add a retry and fallback for AI generation; complete the stubbed access management endpoints; standardize API responses with a consistent envelope (\texttt{\{success, data, error\}}).
+
+\textbf{Longer-term:} real-time collaborative editing over WebSockets; export to PDF, PPTX, and HTML; a theme marketplace; self-hosted LLM support for organizations with data privacy constraints.
+
+\subsection{Conclusion}
+
+P2M does what it set out to do. Writing a presentation in Markdown is faster and less frustrating than fighting a visual editor, especially for decks with substantial content. The AI generation feature --- a plain-language prompt returning a structured slide deck in under 15 seconds --- is the kind of gain that is difficult to give up once you have used it.
+
+The architecture is sound. The technology choices fit the scale, the dual-database split works cleanly in practice, and the theming system is one of the more satisfying design decisions in the codebase. The remaining gaps are real --- testing, request validation, typed errors --- but none of them require structural changes to fix. The foundation is there.
+
+\end{document}
