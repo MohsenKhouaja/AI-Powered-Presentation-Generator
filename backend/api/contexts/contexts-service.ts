@@ -9,6 +9,7 @@ import { UPLOAD_PATH } from "../../config/uploads.js";
 import path from "node:path";
 import type {
   ContextRow,
+  contextUpdate,
   ContextWithFilesRow,
   NewContextRow,
   NewFileRow,
@@ -26,7 +27,7 @@ const findOne = async (
     },
   });
   if (!context) {
-    return null;
+    throw new Error("context doesn't exist");
   }
   const files = await Promise.all(
     context.files.map(async (file) => {
@@ -54,6 +55,9 @@ const create = async (
 ): Promise<ContextRow> => {
   const contextId = randomUUID() as string;
   return await db.transaction(async (tx) => {
+    if (context.prompt === undefined) {
+      throw new Error("Prompt is required");
+    }
     await tx.insert(contexts).values({
       id: contextId,
       prompt: context.prompt,
@@ -80,7 +84,7 @@ const create = async (
 
 const update = async (
   db: DBContext,
-  contextUpdate: Partial<ContextRow>,
+  contextUpdate: contextUpdate,
   newFiles: uploadedFile[],
   deletedFilesNames: string[],
 ) => {
@@ -93,10 +97,9 @@ const update = async (
       ...file,
       contextId: contextUpdate.id,
     }));
-    const createdFileRows =
-      createdFiles.length > 0
-        ? await fileService.createMany(tx, createdFiles)
-        : [];
+    if (createdFiles.length > 0) {
+      await fileService.createMany(tx, createdFiles);
+    }
     await fileService.deleteMany(tx, deletedFilesNames);
     return {
       context: contextUpdate,

@@ -16,18 +16,21 @@ const poolParams = {
 
 const DATABASE_URL = `mysql://${poolParams.user}:${poolParams.password}@${poolParams.host}:${poolParams.port}/${poolParams.name}`;
 
-
 export const db = drizzle(DATABASE_URL, { relations });
 
-type TransactionContext = Parameters<Parameters<typeof db.transaction>[0]>[0];
+export type TransactionContext = Parameters<
+  Parameters<typeof db.transaction>[0]
+>[0];
 export type DBContext = typeof db | TransactionContext;
 
 console.log("MySQL Database initialized");
+
+if (!process.env.MONGO_URI) {
+  throw new Error("MONGO_URI environment variable is not set");
+}
 
 const mongoClient = new MongoClient(process.env.MONGO_URI);
 await mongoClient.connect();
 export const mongoDB = mongoClient.db("myDatabase");
 
 console.log("MongoDB initialized");
-
-

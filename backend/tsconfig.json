@@ -9,7 +9,15 @@
     "skipLibCheck": true,
     "outDir": "./dist",
     "rootDir": ".",
-    "types": ["node"]
+    "types": ["node"],
+    "noImplicitAny": true,
+    "strict": true
   },
-  "include": ["api/**/*.ts", "config/**/*.ts", "database/**/*.ts", "middleware/**/*.ts", "routes/**/*.ts"]
+  "include": [
+    "api/**/*.ts",
+    "config/**/*.ts",
+    "database/**/*.ts",
+    "middleware/**/*.ts",
+    "routes/**/*.ts"
+  ]
 }

@@ -102,7 +102,7 @@ const findOneDetailed = async (
     },
   });
 
-  if (!presentationRow) {
+  if (!presentationRow || !presentationRow.contexts) {
     throw new Error("presentation doesn't exist");
   }
 
@@ -136,14 +136,14 @@ const findOneDetailed = async (
     presentationRow.contexts.id as UUID,
   );
 
-  const detail = {
+  const detail: presentationDetail = {
     id: presentationRow.id,
     title: presentationRow.title,
     userId: presentationRow.userId as UUID,
     createdAt: presentationRow.createdAt,
     slides: slideRows.map((row) => ({
       id: row.id,
-      content: slideContentMap.get(row.id),
+      content: slideContentMap.get(row.id)!,
       presentationId: row.presentationId,
       slideOrder: row.slideOrder,
     })),

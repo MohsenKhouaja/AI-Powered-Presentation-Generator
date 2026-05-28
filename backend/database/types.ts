@@ -1,3 +1,4 @@
+import e from "express";
 import {
   contexts,
   editAccess,
@@ -20,6 +21,7 @@ export type presentationDetail = PresentationRow & {
 
 export type ContextRow = typeof contexts.$inferSelect;
 export type NewContextRow = Omit<typeof contexts.$inferInsert, "id">;
+export type contextUpdate = Partial<NewContextRow> & { id: string };
 export type ContextWithFilesRow = ContextRow & { files: downloadedFile[] };
 
 export type SlideRow = typeof slides.$inferSelect;

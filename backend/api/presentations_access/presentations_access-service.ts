@@ -38,11 +38,11 @@ const grantAccess = async (
     columns: { userId: true },
   });
   if (!presentationRow) {
-    throw new Error("presnetation doesn't exist");
+    throw new Error("presentation doesn't exist");
   }
   const userOwnsPresentation: boolean = presentationRow.userId === userId;
   if (!userOwnsPresentation) {
-    throw new Error("user unauthorized to grand access");
+    throw new Error("user unauthorized to grant access");
   }
   const existingAccessRow = await db.query.editAccess.findFirst({
     where: {
@@ -74,7 +74,7 @@ const grantAccess = async (
     id: editAccessId,
     userId: userIdFromEmail,
     presentationId: editAccessInsert.presentationId,
-    expiresAt: editAccessInsert.expiresAt,
+    expiresAt: expiresAtValue,
   };
 };
 

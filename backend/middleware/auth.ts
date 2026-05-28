@@ -9,6 +9,11 @@ function authMiddleware(req, res, next) {
       return res.status(401).json({ message: "Unauthorized, token missing" });
     }
     const token = authHeader.split(" ")[1];
+    if (!process.env.JWT_ACCESS_TOKEN_SECRET_KEY) {
+      throw new Error(
+        "JWT_ACCESS_TOKEN_SECRET_KEY environment variable is not set",
+      );
+    }
     const payload = jsonwebtoken.verify(
       token,
       process.env.JWT_ACCESS_TOKEN_SECRET_KEY,

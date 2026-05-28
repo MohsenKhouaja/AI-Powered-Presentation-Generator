@@ -1,14 +1,10 @@
 import { randomUUID } from "node:crypto";
 import type { UUID } from "node:crypto";
-import { and, eq, gt, inArray } from "drizzle-orm";
+import { and, eq, gt, sql } from "drizzle-orm";
 import type { Collection } from "mongodb";
 import type { DBContext } from "../../database/index.js";
 import { mongoDB } from "../../database/index.js";
-import {
-  editAccess,
-  presentations,
-  slides,
-} from "../../database/drizzle/schema.js";
+import { slides } from "../../database/drizzle/schema.js";
 import type { SlideRow, SlideRowWithContent } from "../../database/types.js";
 import { contextService } from "../contexts/contexts-service.js";
 
@@ -212,11 +208,12 @@ const assertCanEditPresentation = async (
   }
 };
 
-const getMongoContentBySlideId = async (
-  slideId: UUID,
-): Promise<string | null> => {
+const getMongoContentBySlideId = async (slideId: UUID): Promise<string> => {
   const contentDoc = await slidesContentCollection.findOne({ _id: slideId });
-  return contentDoc?.slide_content ?? null;
+  if (!contentDoc) {
+    throw new Error("slide content not found");
+  }
+  return contentDoc.slide_content;
 };
 
 const findMany = async (
@@ -252,7 +249,7 @@ const findOne = async (
 ): Promise<SlideRowWithContent> => {
   await assertCanEditPresentation(db, presentationId, userId);
 
-  const slideRow: SlideRow | null = await db.query.slides.findFirst({
+  const slideRow = await db.query.slides.findFirst({
     where: { id: slideId, presentationId },
   });
 
@@ -320,7 +317,7 @@ const update = async (
 ): Promise<SlideRowWithContent> => {
   await assertCanEditPresentation(db, presentationId, userId);
 
-  const slideRow: SlideRow | null = await db.query.slides.findFirst({
+  const slideRow = await db.query.slides.findFirst({
     where: { id: slideId, presentationId },
   });
 
@@ -362,7 +359,7 @@ const removeOne = async (
     await tx.delete(slides).where(eq(slides.id, slideId));
     await tx
       .update(slides)
-      .set({ slideOrder: (slideRow.slideOrder ?? 0) - 1 })
+      .set({ slideOrder: sql`${slides.slideOrder} - 1` })
       .where(
         and(
           eq(slides.presentationId, presentationId),
@@ -391,8 +388,8 @@ const updateOrder = async (
       const firstSlide = firstSlideOrder[i];
       const secondSlide = secondSlideOrder[i];
       if (firstSlide.id !== secondSlide.id) {
-        await tx.slides
-          .update()
+        await tx
+          .update(slides)
           .set({ slideOrder: secondSlide.order })
           .where(eq(slides.id, firstSlide.id));
       }

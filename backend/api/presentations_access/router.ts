@@ -46,7 +46,7 @@ presentationsAccessRouter.post(
     const parsedExpiresAt =
       typeof expiresAtInput === "string" && expiresAtInput.length > 0
         ? new Date(expiresAtInput)
-        : null;
+        : undefined;
 
     if (!email) {
       res.status(400).json({ error: "Email is required" });
