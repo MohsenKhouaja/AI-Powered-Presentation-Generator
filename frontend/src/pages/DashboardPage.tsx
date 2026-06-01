@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   AlertCircleIcon,
   FileTextIcon,
@@ -33,6 +33,7 @@ import {
 
 export function DashboardPage() {
   const [title, setTitle] = useState("");
+  const navigate = useNavigate();
   const presentationsQuery = usePresentationsQuery();
   const createMutation = useCreatePresentationMutation();
   const deleteMutation = useDeletePresentationMutation();
@@ -51,9 +52,13 @@ export function DashboardPage() {
       return;
     }
 
-    await createMutation
+    const created = await createMutation
       .mutateAsync({ title: nextTitle })
       .catch(() => undefined);
+    if (created) {
+      navigate(`/presentations/${created.id}/edit`);
+      return;
+    }
     setTitle("");
   };
 

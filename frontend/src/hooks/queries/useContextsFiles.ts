@@ -12,22 +12,22 @@ export interface ContextRecord {
 export interface SharedFileRecord {
   id: string;
   originalName: string;
-  storageKey: string;
+  fileName: string;
   mimeType: string;
   sizeBytes: number;
-  fileType: string;
   contextId: string;
 }
 
 interface CreateContextInput {
   prompt: string;
+  presentationId?: string | null;
   files?: File[];
 }
 
 interface UpdateContextInput {
   contextId: string;
   prompt: string;
-  deletedFilesIds?: string[];
+  deletedFilesNames?: string[];
   files?: File[];
 }
 
@@ -45,16 +45,22 @@ interface UpdateContextResponse {
 function buildContextFormData(
   prompt: string,
   files: File[] = [],
-  deletedFilesIds: string[] = [],
+  deletedFilesNames: string[] = [],
+  presentationId?: string | null,
 ): FormData {
   const formData = new FormData();
   formData.append("prompt", prompt);
+  if (presentationId) {
+    formData.append("presentationId", presentationId);
+  }
 
   for (const file of files) {
     formData.append("files", file);
   }
 
-  formData.append("deletedFilesIds", JSON.stringify(deletedFilesIds));
+  if (deletedFilesNames.length > 0) {
+    formData.append("deletedFilesNames", JSON.stringify(deletedFilesNames));
+  }
 
   return formData;
 }
@@ -74,7 +80,7 @@ export function useContextByPresentationQuery(presentationId: string | null) {
 }
 
 export function useContextFilesQuery(contextId: string | null, enabled = true) {
-  const queryClient = useQueryClient();
+  const api = useApiClient();
 
   return useQuery({
     queryKey: queryKeys.contexts.files(contextId ?? ""),
@@ -83,11 +89,11 @@ export function useContextFilesQuery(contextId: string | null, enabled = true) {
         return [];
       }
 
-      const cachedFiles = queryClient.getQueryData<SharedFileRecord[]>(
-        queryKeys.contexts.files(contextId),
+      const context = await api.get<{ files: SharedFileRecord[] }>(
+        `/api/contexts/${contextId}`,
       );
 
-      return cachedFiles ?? [];
+      return context.files ?? [];
     },
     enabled: enabled && Boolean(contextId),
   });
@@ -98,8 +104,8 @@ export function useCreateContextMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ prompt, files = [] }: CreateContextInput) => {
-      const body = buildContextFormData(prompt, files);
+    mutationFn: ({ prompt, presentationId, files = [] }: CreateContextInput) => {
+      const body = buildContextFormData(prompt, files, [], presentationId);
       return api.post<CreateContextResponse>("/api/contexts", body);
     },
     onSuccess: async (result) => {
@@ -135,10 +141,10 @@ export function useUpdateContextMutation() {
     mutationFn: ({
       contextId,
       prompt,
-      deletedFilesIds = [],
+      deletedFilesNames = [],
       files = [],
     }: UpdateContextInput) => {
-      const body = buildContextFormData(prompt, files, deletedFilesIds);
+      const body = buildContextFormData(prompt, files, deletedFilesNames);
       return api.put<UpdateContextResponse>(`/api/contexts/${contextId}`, body);
     },
     onSuccess: async (result, variables) => {

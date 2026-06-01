@@ -1,5 +1,5 @@
 import { jwtDecode, type JwtPayload } from "jwt-decode";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import authContext from "./AuthContext";
 type HttpMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
@@ -23,7 +23,7 @@ function extractAccessToken(payload: unknown): string | null {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [, setEmail] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [token, setToken] = useState<string | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [expiration, setExpiration] = useState<number | null>(null);
@@ -33,9 +33,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     options: object,
   ): Promise<string | null> => {
     try {
-      if (isLoading) {
-        return null;
-      }
       setIsLoading(true);
       const response = await fetch(`/api/auth/${path}`, {
         ...options,
@@ -117,6 +114,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(null);
     setExpiration(null);
   };
+
+  useEffect(() => {
+    refresh().finally(() => setIsLoading(false));
+  }, []);
 
   const fetchwithauth = async (
     path: string,

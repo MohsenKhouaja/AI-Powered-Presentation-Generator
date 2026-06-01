@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { MarkdownRenderer } from "@/components/markdownRenderer";
 import {
   AlertCircleIcon,
   ArrowLeftIcon,
@@ -29,6 +28,10 @@ export function PresentationViewerPage() {
   const slidesQuery = usePresentationSlidesQuery(id ?? null, Boolean(id));
   const [slideIndex, setSlideIndex] = useState(0);
 
+  // 16:9 scale refs
+  const slideWrapperRef = useRef<HTMLDivElement>(null);
+  const [slideScale, setSlideScale] = useState(1);
+
   const slides = useMemo(() => slidesQuery.data ?? [], [slidesQuery.data]);
 
   useEffect(() => {
@@ -49,6 +52,17 @@ export function PresentationViewerPage() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [navigate, slides.length]);
+
+  // Keep scale in sync with wrapper width
+  useEffect(() => {
+    const el = slideWrapperRef.current;
+    if (!el) return;
+    const update = () => setSlideScale(el.offsetWidth / 1280);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   if (detailQuery.isPending || slidesQuery.isPending) {
     return (
@@ -118,13 +132,28 @@ export function PresentationViewerPage() {
               </Button>
             </div>
           </header>
-          <SlideThemeBoundary className="rounded-xl border bg-card p-6 shadow-sm md:p-10">
-            <div className="prose prose-neutral max-w-none dark:prose-invert">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {currentSlide.content}
-              </ReactMarkdown>
+
+          {/* 16:9 slide canvas — no scrollbars, fully scaled to fit */}
+          <div
+            ref={slideWrapperRef}
+            className="relative w-full overflow-hidden rounded-xl border shadow-sm"
+            style={{ paddingBottom: "56.25%" }}
+          >
+            <div
+              className="absolute top-0 left-0 origin-top-left overflow-hidden"
+              style={{
+                width: 1280,
+                height: 720,
+                transform: `scale(${slideScale})`,
+              }}
+            >
+              <SlideThemeBoundary className="h-full w-full p-16">
+                <div className="prose prose-neutral max-w-none dark:prose-invert">
+                  <MarkdownRenderer content={currentSlide.content} />
+                </div>
+              </SlideThemeBoundary>
             </div>
-          </SlideThemeBoundary>
+          </div>
         </div>
       </section>
 

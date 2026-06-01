@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { MarkdownRenderer } from "@/components/markdownRenderer";
 import {
   AlertCircleIcon,
   ArrowLeftIcon,
@@ -119,13 +118,50 @@ export function SharedPresentationReadOnlyPage() {
             </div>
           </header>
 
-          <SlideThemeBoundary className="rounded-xl border bg-card p-6 shadow-sm md:p-10">
-            <div className="prose prose-neutral max-w-none dark:prose-invert">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {currentSlide.content}
-              </ReactMarkdown>
-            </div>
-          </SlideThemeBoundary>
+           <SlideThemeBoundary className="rounded-xl border bg-card p-6 shadow-sm md:p-10">
+              <div className="prose prose-neutral max-w-none dark:prose-invert">
+                <MarkdownRenderer content={currentSlide.content} />
+              </div>
+            </SlideThemeBoundary>
+
+            {detailQuery.data.context?.files && detailQuery.data.context.files.length > 0 && (
+              <section className="mt-6">
+                <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Reference Files
+                </h2>
+                <div className="flex flex-wrap gap-4">
+                  {detailQuery.data.context.files.map((file) =>
+                    file.mimeType.startsWith("image/") ? (
+                      <a
+                        key={file.id}
+                        href={`data:${file.mimeType};base64,${file.base64File}`}
+                        download={file.originalName}
+                        className="group relative"
+                        title={file.originalName}
+                      >
+                        <img
+                          src={`data:${file.mimeType};base64,${file.base64File}`}
+                          alt={file.originalName}
+                          className="max-h-36 rounded-lg border object-contain transition-shadow hover:shadow-md"
+                        />
+                        <span className="mt-1 block max-w-40 truncate text-xs text-muted-foreground">
+                          {file.originalName}
+                        </span>
+                      </a>
+                    ) : (
+                      <a
+                        key={file.id}
+                        href={`data:${file.mimeType};base64,${file.base64File}`}
+                        download={file.originalName}
+                        className="flex items-center gap-2 rounded-lg border p-3 text-sm hover:bg-muted"
+                      >
+                        {file.originalName}
+                      </a>
+                    ),
+                  )}
+                </div>
+              </section>
+            )}
         </div>
       </section>
 

@@ -9,8 +9,6 @@ import {
   type FormEvent,
 } from "react";
 import { Link, useParams } from "react-router-dom";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import {
   AlertCircleIcon,
   ArrowLeftIcon,
@@ -29,6 +27,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { MarkdownRenderer } from "@/components/markdownRenderer";
 import {
   Empty,
   EmptyDescription,
@@ -84,15 +83,21 @@ export function PresentationEditorPage() {
   const [isSavedVisible, setIsSavedVisible] = useState(false);
   const [editorError, setEditorError] = useState<string | null>(null);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
-  const [deletedFilesIds, setDeletedFilesIds] = useState<string[]>([]);
+  const [deletedFilesNames, setDeletedFilesNames] = useState<string[]>([]);
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteExpiresAt, setInviteExpiresAt] = useState("");
   const [draggingSlideId, setDraggingSlideId] = useState<string | null>(null);
   const [dragOverSlideId, setDragOverSlideId] = useState<string | null>(null);
+  const [numSlides, setNumSlides] = useState<string>("");
+
   const autosaveTimersRef = useRef<Record<string, number>>({});
   const savingSlidesRef = useRef<Set<string>>(new Set());
   const savedTimerRef = useRef<number | null>(null);
+
+  // For the 16:9 scaled preview
+  const previewWrapperRef = useRef<HTMLDivElement>(null);
+  const [previewScale, setPreviewScale] = useState(1);
 
   const createContextMutation = useCreateContextMutation();
   const updateContextMutation = useUpdateContextMutation();
@@ -104,6 +109,7 @@ export function PresentationEditorPage() {
   const generateSlidesMutation = useGenerateSlidesFromContextMutation(
     id ?? null,
   );
+
   const activeContextId =
     createdContextId ?? linkedContextQuery.data?.id ?? null;
   const contextFilesQuery = useContextFilesQuery(
@@ -119,9 +125,9 @@ export function PresentationEditorPage() {
         content: slide.content ?? "",
         slideOrder: slide.slideOrder,
       })) ?? [];
-
     return [...mappedSlides].sort((a, b) => a.slideOrder - b.slideOrder);
   }, [slidesQuery.data]);
+
   const titleDraft = titleOverride ?? detailQuery.data?.title ?? "";
   const safeSelectedSlideIndex = Math.min(
     selectedSlideIndex,
@@ -134,62 +140,64 @@ export function PresentationEditorPage() {
   const effectivePromptDraft =
     promptDraft ?? linkedContextQuery.data?.prompt ?? "";
 
+  // Sync slide data into draft/lastSaved state
   useEffect(() => {
-    if (!slidesQuery.data) {
-      return;
-    }
-
+    if (!slidesQuery.data) return;
     setDraftById((current) => {
       const next = { ...current };
       slidesQuery.data.forEach((slide) => {
-        if (next[slide.id] === undefined) {
-          next[slide.id] = slide.content ?? "";
-        }
+        if (next[slide.id] === undefined) next[slide.id] = slide.content ?? "";
       });
       return next;
     });
-
     setLastSavedById((current) => {
       const next = { ...current };
       slidesQuery.data.forEach((slide) => {
-        if (next[slide.id] === undefined) {
-          next[slide.id] = slide.content ?? "";
-        }
+        if (next[slide.id] === undefined) next[slide.id] = slide.content ?? "";
       });
       return next;
     });
   }, [slidesQuery.data]);
 
+  // Clamp selected slide index
   useEffect(() => {
     if (slides.length === 0) {
       setSelectedSlideIndex(0);
       return;
     }
-
     setSelectedSlideIndex((current) =>
       Math.min(current, Math.max(slides.length - 1, 0)),
     );
   }, [slides.length]);
 
+  // Cleanup timers on unmount
   useEffect(() => {
     return () => {
-      Object.values(autosaveTimersRef.current).forEach((timer) => {
-        window.clearTimeout(timer);
-      });
-      if (savedTimerRef.current) {
-        window.clearTimeout(savedTimerRef.current);
-      }
+      Object.values(autosaveTimersRef.current).forEach((timer) =>
+        window.clearTimeout(timer),
+      );
+      if (savedTimerRef.current) window.clearTimeout(savedTimerRef.current);
     };
   }, []);
 
+  // ResizeObserver to keep preview scale accurate
+  useEffect(() => {
+    const el = previewWrapperRef.current;
+    if (!el) return;
+    const update = () => setPreviewScale(el.offsetWidth / 1280);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [isPreviewVisible]);
+
   const showSavedNotice = () => {
     setIsSavedVisible(true);
-    if (savedTimerRef.current) {
-      window.clearTimeout(savedTimerRef.current);
-    }
-    savedTimerRef.current = window.setTimeout(() => {
-      setIsSavedVisible(false);
-    }, 1500);
+    if (savedTimerRef.current) window.clearTimeout(savedTimerRef.current);
+    savedTimerRef.current = window.setTimeout(
+      () => setIsSavedVisible(false),
+      1500,
+    );
   };
 
   const saveSlideContent = async (
@@ -197,28 +205,14 @@ export function PresentationEditorPage() {
     content: string,
     { showNotice }: { showNotice: boolean },
   ) => {
-    if (lastSavedById[slideId] === content) {
-      return;
-    }
-    if (savingSlidesRef.current.has(slideId)) {
-      return;
-    }
-
+    if (lastSavedById[slideId] === content) return;
+    if (savingSlidesRef.current.has(slideId)) return;
     savingSlidesRef.current.add(slideId);
     setEditorError(null);
-
     try {
-      await updateSlideMutation.mutateAsync({
-        slideId,
-        content,
-      });
-      setLastSavedById((current) => ({
-        ...current,
-        [slideId]: content,
-      }));
-      if (showNotice) {
-        showSavedNotice();
-      }
+      await updateSlideMutation.mutateAsync({ slideId, content });
+      setLastSavedById((current) => ({ ...current, [slideId]: content }));
+      if (showNotice) showSavedNotice();
     } catch (error) {
       setEditorError(
         error instanceof Error ? error.message : "Failed to save slide",
@@ -230,10 +224,7 @@ export function PresentationEditorPage() {
 
   const scheduleAutosave = (slideId: string, content: string) => {
     const existingTimer = autosaveTimersRef.current[slideId];
-    if (existingTimer) {
-      window.clearTimeout(existingTimer);
-    }
-
+    if (existingTimer) window.clearTimeout(existingTimer);
     autosaveTimersRef.current[slideId] = window.setTimeout(() => {
       void saveSlideContent(slideId, content, { showNotice: true });
     }, 1200);
@@ -245,7 +236,6 @@ export function PresentationEditorPage() {
         content: "# New Slide",
         slideOrder: slides.length + 1,
       });
-
       setDraftById((current) => ({
         ...current,
         [createdSlide.id]: createdSlide.content ?? "",
@@ -263,12 +253,8 @@ export function PresentationEditorPage() {
   };
 
   const onDeleteSlide = async () => {
-    if (!currentSlide) {
-      return;
-    }
-
+    if (!currentSlide) return;
     const deletingIndex = safeSelectedSlideIndex;
-
     try {
       await deleteSlideMutation.mutateAsync(currentSlide.id);
       setDraftById((current) => {
@@ -302,23 +288,15 @@ export function PresentationEditorPage() {
   };
 
   const onDropSlide = async (targetId: string) => {
-    if (!draggingSlideId || draggingSlideId === targetId) {
-      return;
-    }
-
+    if (!draggingSlideId || draggingSlideId === targetId) return;
     const draggedIndex = slides.findIndex(
       (slide) => slide.id === draggingSlideId,
     );
     const targetIndex = slides.findIndex((slide) => slide.id === targetId);
-
-    if (draggedIndex === -1 || targetIndex === -1) {
-      return;
-    }
-
+    if (draggedIndex === -1 || targetIndex === -1) return;
     const draggedSlide = slides[draggedIndex];
     const targetSlide = slides[targetIndex];
     const selectedId = currentSlide?.id ?? null;
-
     try {
       await reorderSlidesMutation.mutateAsync({
         first: [
@@ -330,7 +308,6 @@ export function PresentationEditorPage() {
           { id: targetSlide.id, order: draggedSlide.slideOrder },
         ],
       });
-
       if (selectedId) {
         const nextSlides = [...slides];
         nextSlides[draggedIndex] = targetSlide;
@@ -338,9 +315,7 @@ export function PresentationEditorPage() {
         const nextIndex = nextSlides.findIndex(
           (slide) => slide.id === selectedId,
         );
-        if (nextIndex >= 0) {
-          setSelectedSlideIndex(nextIndex);
-        }
+        if (nextIndex >= 0) setSelectedSlideIndex(nextIndex);
       }
     } catch (error) {
       setEditorError(
@@ -353,33 +328,20 @@ export function PresentationEditorPage() {
   };
 
   const onSaveSelectedSlide = useCallback(async () => {
-    if (!currentSlide) {
-      return;
-    }
-
+    if (!currentSlide) return;
     const pendingTimer = autosaveTimersRef.current[currentSlide.id];
-    if (pendingTimer) {
-      window.clearTimeout(pendingTimer);
-    }
-
+    if (pendingTimer) window.clearTimeout(pendingTimer);
     await saveSlideContent(currentSlide.id, markdownDraft, {
       showNotice: true,
     });
-
-    if (!id) {
-      return;
-    }
-
+    if (!id) return;
     const normalizedTitle = titleDraft.trim();
     if (
       normalizedTitle &&
       normalizedTitle !== (detailQuery.data?.title ?? "")
     ) {
       await updatePresentationMutation
-        .mutateAsync({
-          presentationId: id,
-          title: normalizedTitle,
-        })
+        .mutateAsync({ presentationId: id, title: normalizedTitle })
         .catch(() => undefined);
     }
   }, [
@@ -398,28 +360,18 @@ export function PresentationEditorPage() {
         void onSaveSelectedSlide();
       }
     };
-
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [onSaveSelectedSlide]);
 
   const onInviteAccess = async (event: FormEvent) => {
     event.preventDefault();
-
     const email = inviteEmail.trim();
-    if (!email) {
-      return;
-    }
-
+    if (!email) return;
     const expiresAtIso = inviteExpiresAt
       ? new Date(inviteExpiresAt).toISOString()
       : null;
-
-    await inviteAccessMutation.mutateAsync({
-      email,
-      expiresAt: expiresAtIso,
-    });
-
+    await inviteAccessMutation.mutateAsync({ email, expiresAt: expiresAtIso });
     setInviteEmail("");
     setInviteExpiresAt("");
   };
@@ -432,42 +384,37 @@ export function PresentationEditorPage() {
 
   const onSaveContext = async (event: FormEvent) => {
     event.preventDefault();
-
     if (activeContextId) {
       await updateContextMutation
         .mutateAsync({
           contextId: activeContextId,
           prompt: effectivePromptDraft,
           files: pendingFiles,
-          deletedFilesIds,
+          deletedFilesNames,
         })
         .catch(() => undefined);
     } else {
       const result = await createContextMutation
         .mutateAsync({
           prompt: effectivePromptDraft,
+          presentationId: id,
           files: pendingFiles,
         })
         .catch(() => null);
-      if (result?.context.id) {
-        setCreatedContextId(result.context.id);
-      }
+      if (result?.context.id) setCreatedContextId(result.context.id);
     }
-
     setPendingFiles([]);
-    setDeletedFilesIds([]);
+    setDeletedFilesNames([]);
   };
 
   const onGenerateSlides = async () => {
-    if (!activeContextId) {
-      return;
-    }
-
+    if (!activeContextId) return;
     setEditorError(null);
-
+    const parsed = numSlides.trim() !== "" ? Number(numSlides) : undefined;
     try {
       await generateSlidesMutation.mutateAsync({
         contextId: activeContextId,
+        numSlides: parsed,
       });
       setDraftById({});
       setLastSavedById({});
@@ -525,9 +472,7 @@ export function PresentationEditorPage() {
             </Button>
             <Input
               value={titleDraft}
-              onChange={(event) => {
-                setTitleOverride(event.target.value);
-              }}
+              onChange={(event) => setTitleOverride(event.target.value)}
               className="max-w-sm"
               aria-label="Presentation title"
             />
@@ -563,7 +508,7 @@ export function PresentationEditorPage() {
                 Slides
               </p>
             </div>
-            <div className="space-y-1 p-2" role="tablist" aria-label="Slides">
+            <div className="max-h-[400px] space-y-1 overflow-y-auto p-2" role="tablist" aria-label="Slides">
               {generateSlidesMutation.isPending ? (
                 <div className="flex min-h-[120px] items-center justify-center">
                   <span className="animate-pulse text-xs text-muted-foreground opacity-80">
@@ -578,31 +523,26 @@ export function PresentationEditorPage() {
                 slides.map((slide, index) => (
                   <div
                     key={slide.id}
-                    className={`flex h-10 items-center gap-2 rounded px-2 text-sm text-foreground transition ${
-                      draggingSlideId === slide.id
-                        ? "bg-muted shadow-[var(--shadow-subtle-2)]"
-                        : index === safeSelectedSlideIndex
-                          ? "bg-muted"
-                          : "hover:bg-muted/60"
-                    }`}
+                    className={`flex h-10 items-center gap-2 rounded px-2 text-sm text-foreground transition ${draggingSlideId === slide.id
+                      ? "bg-muted shadow-[var(--shadow-subtle-2)]"
+                      : index === safeSelectedSlideIndex
+                        ? "bg-muted"
+                        : "hover:bg-muted/60"
+                      }`}
                     onDragOver={(event) => {
                       event.preventDefault();
-                      if (dragOverSlideId !== slide.id) {
+                      if (dragOverSlideId !== slide.id)
                         setDragOverSlideId(slide.id);
-                      }
                     }}
                     onDrop={() => void onDropSlide(slide.id)}
                     onDragLeave={() => {
-                      if (dragOverSlideId === slide.id) {
+                      if (dragOverSlideId === slide.id)
                         setDragOverSlideId(null);
-                      }
                     }}
                   >
                     <button
                       type="button"
-                      onClick={() => {
-                        setSelectedSlideIndex(index);
-                      }}
+                      onClick={() => setSelectedSlideIndex(index)}
                       className="flex h-8 flex-1 items-center rounded px-1 text-left"
                       aria-selected={index === safeSelectedSlideIndex}
                       role="tab"
@@ -637,6 +577,7 @@ export function PresentationEditorPage() {
                   placeholder="Add prompt context for AI generation"
                   rows={6}
                   aria-label="Context prompt"
+                  className="max-h-64 overflow-y-auto resize-y"
                 />
                 <div className="space-y-2">
                   <label
@@ -659,7 +600,6 @@ export function PresentationEditorPage() {
                     PDF, DOCX, TXT, MD, PNG, JPG
                   </p>
                 </div>
-
                 <div className="space-y-2">
                   {contextFilesQuery.data?.map((file) => (
                     <div
@@ -672,7 +612,7 @@ export function PresentationEditorPage() {
                         variant="ghost"
                         type="button"
                         onClick={() =>
-                          setDeletedFilesIds((current) => [...current, file.id])
+                          setDeletedFilesNames((current) => [...current, file.fileName])
                         }
                         aria-label={`Mark ${file.originalName} for deletion`}
                       >
@@ -680,7 +620,6 @@ export function PresentationEditorPage() {
                       </Button>
                     </div>
                   ))}
-
                   {pendingFiles.map((file) => (
                     <div
                       key={`${file.name}-${file.size}`}
@@ -693,7 +632,7 @@ export function PresentationEditorPage() {
                         type="button"
                         onClick={() =>
                           setPendingFiles((current) =>
-                            current.filter((candidate) => candidate !== file),
+                            current.filter((c) => c !== file),
                           )
                         }
                         aria-label={`Remove ${file.name}`}
@@ -703,7 +642,6 @@ export function PresentationEditorPage() {
                     </div>
                   ))}
                 </div>
-
                 <Button
                   type="submit"
                   className="w-full"
@@ -713,27 +651,37 @@ export function PresentationEditorPage() {
                   }
                 >
                   {createContextMutation.isPending ||
-                  updateContextMutation.isPending ? (
+                    updateContextMutation.isPending ? (
                     <Spinner className="mr-2" />
                   ) : (
                     <SaveIcon className="mr-2 size-4" />
                   )}
                   Save Context
                 </Button>
-                <Button
-                  type="button"
-                  onClick={onGenerateSlides}
-                  disabled={
-                    !activeContextId || generateSlidesMutation.isPending
-                  }
-                  className="h-9 rounded-full border border-border bg-primary px-4 py-0 text-sm font-medium text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {generateSlidesMutation.isPending
-                    ? "Generating..."
-                    : "Generate slides"}
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min={1}
+                    max={50}
+                    placeholder="Slides (auto)"
+                    value={numSlides}
+                    onChange={(e) => setNumSlides(e.target.value)}
+                    className="h-9 w-28 rounded-full border-border text-sm"
+                  />
+                  <Button
+                    type="button"
+                    onClick={onGenerateSlides}
+                    disabled={
+                      !activeContextId || generateSlidesMutation.isPending
+                    }
+                    className="h-9 rounded-full border border-border bg-primary px-4 py-0 text-sm font-medium text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {generateSlidesMutation.isPending
+                      ? "Generating..."
+                      : "Generate slides"}
+                  </Button>
+                </div>
               </form>
-
               {mutationError ? (
                 <Alert variant="destructive" className="mt-3">
                   <AlertCircleIcon />
@@ -782,14 +730,15 @@ export function PresentationEditorPage() {
           </Card>
         </aside>
 
-        <section className="grid gap-4">
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-border bg-background px-4 py-2">
-            <div className="flex flex-wrap items-center gap-2">
+        <section className="flex flex-col">
+          <div className="flex h-10 w-full flex-shrink-0 items-center justify-between gap-2 rounded-2xl border border-border bg-background px-4">
+            <div className="flex items-center gap-1">
               <Button
                 type="button"
                 size="sm"
                 variant="ghost"
                 onClick={onAddSlide}
+                className="h-8 px-3"
               >
                 <PlusIcon className="mr-1 size-4" /> Add slide
               </Button>
@@ -799,6 +748,7 @@ export function PresentationEditorPage() {
                 variant="ghost"
                 onClick={onDeleteSlide}
                 disabled={!currentSlide || deleteSlideMutation.isPending}
+                className="h-8 px-3"
               >
                 <Trash2Icon className="mr-1 size-4" /> Delete slide
               </Button>
@@ -808,6 +758,7 @@ export function PresentationEditorPage() {
                 variant="ghost"
                 onClick={onSaveSelectedSlide}
                 disabled={!currentSlide || updateSlideMutation.isPending}
+                className="h-8 px-3"
               >
                 {updateSlideMutation.isPending ? (
                   <Spinner className="mr-1 size-4" />
@@ -824,10 +775,9 @@ export function PresentationEditorPage() {
             </div>
           </div>
 
-          <div
-            className={`grid gap-4 ${isPreviewVisible ? "lg:grid-cols-2" : ""}`}
-          >
-            <div className="rounded-2xl bg-white p-4 shadow-[var(--shadow-subtle-7)]">
+          <div className="flex flex-col gap-3">
+            {/* Markdown editor — editable Textarea */}
+            <div className="rounded-2xl bg-white px-4 pb-4 pt-2 shadow-[var(--shadow-subtle-7)]">
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="text-sm font-medium text-foreground">
                   Markdown editor
@@ -836,9 +786,7 @@ export function PresentationEditorPage() {
               {slides.length === 0 ? (
                 <Empty className="border">
                   <EmptyHeader>
-                    <EmptyMedia variant="icon">
-                      <UploadIcon className="size-4" />
-                    </EmptyMedia>
+                    <EmptyMedia variant="icon"></EmptyMedia>
                     <EmptyTitle>No slides found</EmptyTitle>
                     <EmptyDescription>
                       This presentation currently has no slides to edit.
@@ -849,36 +797,47 @@ export function PresentationEditorPage() {
                 <Textarea
                   value={markdownDraft}
                   onChange={(event) => {
-                    if (!currentSlide) {
-                      return;
-                    }
-                    const nextValue = event.target.value;
+                    if (!currentSlide) return;
+                    const next = event.target.value;
                     setDraftById((current) => ({
                       ...current,
-                      [currentSlide.id]: nextValue,
+                      [currentSlide.id]: next,
                     }));
-                    scheduleAutosave(currentSlide.id, nextValue);
+                    scheduleAutosave(currentSlide.id, next);
                   }}
-                  rows={20}
-                  className="min-h-[480px] resize-none border-0 bg-transparent p-0 text-sm text-foreground shadow-none focus-visible:ring-0"
-                  aria-label="Markdown editor"
+                  className="h-[400px] w-full resize-none font-mono text-sm"
+                  aria-label="Slide markdown content"
+                  spellCheck={false}
                 />
               )}
             </div>
 
+            {/* Live Preview — Using aspect-video instead of padding hacks */}
             {isPreviewVisible ? (
-              <Card>
+              <Card className="w-full">
                 <CardHeader>
                   <CardTitle className="text-base">Live Preview</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <SlideThemeBoundary className="min-h-[400px] rounded border p-4">
-                    <div className="prose prose-neutral max-w-none dark:prose-invert">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                        {markdownDraft}
-                      </ReactMarkdown>
+                  <div
+                    ref={previewWrapperRef}
+                    className="relative w-full overflow-hidden rounded border aspect-video"
+                  >
+                    <div
+                      className="absolute top-0 left-0 origin-top-left overflow-hidden"
+                      style={{
+                        width: 1280,
+                        height: 720,
+                        transform: `scale(${previewScale})`,
+                      }}
+                    >
+                      <SlideThemeBoundary className="h-full w-full p-12">
+                        <div className="prose prose-neutral max-w-none dark:prose-invert">
+                          <MarkdownRenderer content={markdownDraft} />
+                        </div>
+                      </SlideThemeBoundary>
                     </div>
-                  </SlideThemeBoundary>
+                  </div>
                 </CardContent>
               </Card>
             ) : null}
@@ -894,7 +853,6 @@ export function PresentationEditorPage() {
               Invite collaborators with edit access.
             </DialogDescription>
           </DialogHeader>
-
           <div className="space-y-3">
             <form className="space-y-2" onSubmit={onInviteAccess}>
               <p className="text-sm font-medium">Invite collaborator</p>

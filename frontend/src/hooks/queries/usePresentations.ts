@@ -21,6 +21,15 @@ export interface PresentationDetail extends PresentationSummary {
     id: string;
     prompt: string;
     presentationId: string | null;
+    files: Array<{
+      id: string;
+      contextId: string;
+      fileName: string;
+      mimeType: string;
+      sizeBytes: number;
+      originalName: string;
+      base64File: string;
+    }>;
   } | null;
 }
 

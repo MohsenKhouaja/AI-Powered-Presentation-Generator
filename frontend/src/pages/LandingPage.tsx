@@ -18,7 +18,7 @@ export function LandingPage() {
           id="landing-title"
           className="mt-4 text-4xl font-bold tracking-tight md:text-5xl"
         >
-          MARKDOWN TO PRESENTATION
+          MARKDECK
         </h1>
         <p className="mt-4 max-w-xl text-muted-foreground">
           Transform your ideas into presentation slides with a minimal, focused
