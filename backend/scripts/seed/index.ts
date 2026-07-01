@@ -1,16 +1,20 @@
+import * as crypto from "node:crypto";
 import { randomUUID } from "node:crypto";
 import type { UUID } from "node:crypto";
-
-import { hash } from "node:bcrypt";
+import { promisify } from "node:util";
+import { writeFile } from "node:fs/promises";
+import path from "node:path";
 import type { Collection } from "mongodb";
 
 import { db, mongoDB } from "../../database/index.js";
 import {
   contexts,
+  files as filesTable,
   presentations,
   slides,
   users,
 } from "../../database/drizzle/schema.js";
+import { UPLOAD_PATH } from "../../config/uploads.js";
 
 import { SEED_PRESENTATIONS, SEED_USERS } from "./dataset.js";
 
@@ -41,7 +45,13 @@ export type SeedResult = {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const BCRYPT_ROUNDS = 10;
+const scrypt = promisify(crypto.scrypt);
+
+const hashPassword = async (password: string): Promise<string> => {
+  const salt = crypto.randomBytes(16).toString("hex");
+  const derivedKey = (await scrypt(password, salt, 64)) as Buffer;
+  return `scrypt$${salt}$${derivedKey.toString("hex")}`;
+};
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -60,7 +70,7 @@ export const runSeed = async (): Promise<SeedResult> => {
 
   for (const seedUser of SEED_USERS) {
     const id = randomUUID() as UUID;
-    const hashedPassword = await hash(seedUser.password, BCRYPT_ROUNDS);
+    const hashedPassword = await hashPassword(seedUser.password);
 
     await db.insert(users).values({
       id,
@@ -111,7 +121,34 @@ export const runSeed = async (): Promise<SeedResult> => {
       presentationId,
     });
 
-    // ── 2c. Slides — MySQL row + MongoDB document ────────────────────────
+    // ── 2c. Files — write to disk + MySQL row ────────────────────────────
+
+    if (seedPresentation.files && seedPresentation.files.length > 0) {
+      const fileRows = seedPresentation.files.map((seedFile) => {
+        const fileName = `${randomUUID()}-${seedFile.originalName}`;
+        return {
+          id: randomUUID() as UUID,
+          contextId,
+          fileName,
+          mimeType: seedFile.mimeType,
+          sizeBytes: Buffer.from(seedFile.base64Content, "base64").length,
+          originalName: seedFile.originalName,
+        };
+      });
+
+      await Promise.all(
+        fileRows.map((row, i) =>
+          writeFile(
+            path.join(UPLOAD_PATH, row.fileName),
+            Buffer.from(seedPresentation.files![i].base64Content, "base64"),
+          ),
+        ),
+      );
+
+      await db.insert(filesTable).values(fileRows);
+    }
+
+    // ── 2d. Slides — MySQL row + MongoDB document ────────────────────────
 
     const mongoDocuments: SlideContentDocument[] = [];
 

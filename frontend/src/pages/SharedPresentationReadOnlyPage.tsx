@@ -3,8 +3,6 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { MarkdownRenderer } from "@/components/markdownRenderer";
 import {
   AlertCircleIcon,
-  ArrowLeftIcon,
-  ArrowRightIcon,
   LockIcon,
 } from "lucide-react";
 import { usePresentationDetailQuery } from "@/hooks/queries/usePresentations";
@@ -12,7 +10,6 @@ import { usePresentationSlidesQuery } from "@/hooks/queries/useSlides";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
-import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Empty,
@@ -21,6 +18,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { SlideThemeBoundary } from "@/components/app/SlideThemeBoundary";
+import { SlideNavigationFooter } from "@/components/SlideNavigationFooter";
 
 export function SharedPresentationReadOnlyPage() {
   const { id } = useParams<{ id: string }>();
@@ -95,7 +93,6 @@ export function SharedPresentationReadOnlyPage() {
   }
 
   const currentSlide = slides[slideIndex];
-  const progressValue = ((slideIndex + 1) / slides.length) * 100;
 
   return (
     <main
@@ -119,83 +116,62 @@ export function SharedPresentationReadOnlyPage() {
           </header>
 
            <SlideThemeBoundary className="rounded-xl border bg-card p-6 shadow-sm md:p-10">
-              <div className="prose prose-neutral max-w-none dark:prose-invert">
-                <MarkdownRenderer content={currentSlide.content} />
-              </div>
-            </SlideThemeBoundary>
+             <div className="prose prose-neutral max-w-none dark:prose-invert">
+                <MarkdownRenderer content={currentSlide.content ?? ""} />
+             </div>
+           </SlideThemeBoundary>
 
-            {detailQuery.data.context?.files && detailQuery.data.context.files.length > 0 && (
-              <section className="mt-6">
-                <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Reference Files
-                </h2>
-                <div className="flex flex-wrap gap-4">
-                  {detailQuery.data.context.files.map((file) =>
-                    file.mimeType.startsWith("image/") ? (
-                      <a
-                        key={file.id}
-                        href={`data:${file.mimeType};base64,${file.base64File}`}
-                        download={file.originalName}
-                        className="group relative"
-                        title={file.originalName}
-                      >
-                        <img
-                          src={`data:${file.mimeType};base64,${file.base64File}`}
-                          alt={file.originalName}
-                          className="max-h-36 rounded-lg border object-contain transition-shadow hover:shadow-md"
-                        />
-                        <span className="mt-1 block max-w-40 truncate text-xs text-muted-foreground">
-                          {file.originalName}
-                        </span>
-                      </a>
-                    ) : (
-                      <a
-                        key={file.id}
-                        href={`data:${file.mimeType};base64,${file.base64File}`}
-                        download={file.originalName}
-                        className="flex items-center gap-2 rounded-lg border p-3 text-sm hover:bg-muted"
-                      >
+          {detailQuery.data.context?.files && detailQuery.data.context.files.length > 0 && (
+            <section className="mt-6">
+              <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Reference Files
+              </h2>
+              <div className="flex flex-wrap gap-4">
+                {detailQuery.data.context.files.map((file: { id: string; mimeType: string; base64File: string; originalName: string }) =>
+                  file.mimeType.startsWith("image/") ? (
+                    <a
+                      key={file.id}
+                      href={`data:${file.mimeType};base64,${file.base64File}`}
+                      download={file.originalName}
+                      className="group relative"
+                      title={file.originalName}
+                    >
+                      <img
+                        src={`data:${file.mimeType};base64,${file.base64File}`}
+                        alt={file.originalName}
+                        className="max-h-36 rounded-lg border object-contain transition-shadow hover:shadow-md"
+                      />
+                      <span className="mt-1 block max-w-40 truncate text-xs text-muted-foreground">
                         {file.originalName}
-                      </a>
-                    ),
-                  )}
-                </div>
-              </section>
-            )}
+                      </span>
+                    </a>
+                  ) : (
+                    <a
+                      key={file.id}
+                      href={`data:${file.mimeType};base64,${file.base64File}`}
+                      download={file.originalName}
+                      className="flex items-center gap-2 rounded-lg border p-3 text-sm hover:bg-muted"
+                    >
+                      {file.originalName}
+                    </a>
+                  ),
+                )}
+              </div>
+            </section>
+          )}
         </div>
       </section>
 
-      <footer className="sticky bottom-0 border-t bg-background/95 px-4 py-3 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-4xl flex-wrap items-center gap-3">
-          <Button
-            variant="outline"
-            onClick={() => setSlideIndex((current) => Math.max(current - 1, 0))}
-            disabled={slideIndex === 0}
-            aria-label="Previous slide"
-          >
-            <ArrowLeftIcon className="size-4" />
-          </Button>
-          <div className="min-w-[100px] text-sm text-muted-foreground">
-            {slideIndex + 1}/{slides.length}
-          </div>
-          <Progress
-            value={progressValue}
-            className="h-2 min-w-[150px] flex-1"
-          />
-          <Button
-            variant="outline"
-            onClick={() =>
-              setSlideIndex((current) =>
-                Math.min(current + 1, Math.max(slides.length - 1, 0)),
-              )
-            }
-            disabled={slideIndex >= slides.length - 1}
-            aria-label="Next slide"
-          >
-            <ArrowRightIcon className="size-4" />
-          </Button>
-        </div>
-      </footer>
+      <SlideNavigationFooter
+        slideIndex={slideIndex}
+        totalSlides={slides.length}
+        onPrevious={() => setSlideIndex((current) => Math.max(current - 1, 0))}
+        onNext={() =>
+          setSlideIndex((current) =>
+            Math.min(current + 1, Math.max(slides.length - 1, 0)),
+          )
+        }
+      />
     </main>
   );
 }

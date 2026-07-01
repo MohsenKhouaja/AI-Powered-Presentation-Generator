@@ -1,22 +1,13 @@
 import { useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   AlertCircleIcon,
   FileTextIcon,
   PlusCircleIcon,
-  Trash2Icon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
-import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Empty,
@@ -30,6 +21,7 @@ import {
   useDeletePresentationMutation,
   usePresentationsQuery,
 } from "@/hooks/queries/usePresentations";
+import { PresentationCard } from "@/components/PresentationCard";
 
 export function DashboardPage() {
   const [title, setTitle] = useState("");
@@ -151,45 +143,19 @@ export function DashboardPage() {
             ) : (
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {ownedPresentations.map((presentation) => (
-                  <Card
+                  <PresentationCard
                     key={presentation.id}
-                    className="rounded-[16px] bg-white shadow-[var(--shadow-subtle-7)]"
-                  >
-                    <CardHeader>
-                      <CardTitle className="line-clamp-2 text-base">
-                        {presentation.title}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground">
-                        Created{" "}
-                        {new Date(presentation.createdAt).toLocaleString()}
-                      </p>
-                      <Badge variant="outline" className="mt-2">
-                        Owner
-                      </Badge>
-                    </CardContent>
-                    <CardFooter className="flex flex-wrap gap-2">
-                      <Button asChild size="sm" variant="outline">
-                        <Link to={`/presentations/${presentation.id}`}>
-                          View
-                        </Link>
-                      </Button>
-                      <Button asChild size="sm" variant="outline">
-                        <Link to={`/presentations/${presentation.id}/edit`}>
-                          Edit
-                        </Link>
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => deleteMutation.mutate(presentation.id)}
-                        disabled={deleteMutation.isPending}
-                      >
-                        <Trash2Icon className="mr-1 size-4" /> Delete
-                      </Button>
-                    </CardFooter>
-                  </Card>
+                    id={presentation.id}
+                    title={presentation.title}
+                    createdAt={presentation.createdAt}
+                    badgeLabel="Owner"
+                    badgeVariant="outline"
+                    actions={[
+                      { type: "link", label: "View", to: `/presentations/${presentation.id}`, variant: "outline" },
+                      { type: "link", label: "Edit", to: `/presentations/${presentation.id}/edit`, variant: "outline" },
+                      { type: "button", label: "Delete", onClick: () => deleteMutation.mutate(presentation.id), variant: "destructive", disabled: deleteMutation.isPending },
+                    ]}
+                  />
                 ))}
               </div>
             )}
@@ -219,45 +185,19 @@ export function DashboardPage() {
             ) : (
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {editablePresentations.map((presentation) => (
-                  <Card
+                  <PresentationCard
                     key={presentation.id}
-                    className="rounded-[16px] bg-white shadow-[var(--shadow-subtle-7)]"
-                  >
-                    <CardHeader>
-                      <CardTitle className="line-clamp-2 text-base">
-                        {presentation.title}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground">
-                        Created{" "}
-                        {new Date(presentation.createdAt).toLocaleString()}
-                      </p>
-                      <Badge variant="outline" className="mt-2">
-                        Shared edit
-                      </Badge>
-                    </CardContent>
-                    <CardFooter className="flex flex-wrap gap-2">
-                      <Button asChild size="sm" variant="outline">
-                        <Link to={`/presentations/${presentation.id}`}>
-                          View
-                        </Link>
-                      </Button>
-                      <Button asChild size="sm" variant="outline">
-                        <Link to={`/presentations/${presentation.id}/edit`}>
-                          Edit
-                        </Link>
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => deleteMutation.mutate(presentation.id)}
-                        disabled={true}
-                      >
-                        <Trash2Icon className="mr-1 size-4" /> Delete
-                      </Button>
-                    </CardFooter>
-                  </Card>
+                    id={presentation.id}
+                    title={presentation.title}
+                    createdAt={presentation.createdAt}
+                    badgeLabel="Shared edit"
+                    badgeVariant="outline"
+                    actions={[
+                      { type: "link", label: "View", to: `/presentations/${presentation.id}`, variant: "outline" },
+                      { type: "link", label: "Edit", to: `/presentations/${presentation.id}/edit`, variant: "outline" },
+                      { type: "button", label: "Delete", onClick: () => deleteMutation.mutate(presentation.id), variant: "destructive", disabled: true },
+                    ]}
+                  />
                 ))}
               </div>
             )}

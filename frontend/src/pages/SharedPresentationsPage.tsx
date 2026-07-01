@@ -1,16 +1,6 @@
 import { useMemo } from "react";
-import { Link } from "react-router-dom";
 import { AlertCircleIcon, Share2Icon } from "lucide-react";
 import { usePresentationsQuery } from "@/hooks/queries/usePresentations";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
@@ -20,6 +10,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
+import { PresentationCard } from "@/components/PresentationCard";
 
 export function SharedPresentationsPage() {
   const presentationsQuery = usePresentationsQuery();
@@ -79,29 +70,18 @@ export function SharedPresentationsPage() {
           aria-label="Shared presentations list"
         >
           {sharedPresentations.map((presentation) => (
-            <Card key={presentation.id}>
-              <CardHeader>
-                <CardTitle className="line-clamp-2 text-base">
-                  {presentation.title}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  Shared access: read-only view
-                </p>
-                <Badge variant="outline" className="mt-2">
-                  Shared
-                </Badge>
-              </CardContent>
-              <CardFooter className="flex gap-2">
-                <Button asChild size="sm" variant="outline">
-                  <Link to={`/presentations/${presentation.id}`}>Viewer</Link>
-                </Button>
-                <Button asChild size="sm">
-                  <Link to={`/shared/${presentation.id}`}>Read-only share</Link>
-                </Button>
-              </CardFooter>
-            </Card>
+            <PresentationCard
+              key={presentation.id}
+              id={presentation.id}
+              title={presentation.title}
+              createdAt={presentation.createdAt}
+              badgeLabel="Shared"
+              badgeVariant="outline"
+              actions={[
+                { type: "link", label: "Viewer", to: `/presentations/${presentation.id}`, variant: "outline" },
+                { type: "link", label: "Read-only share", to: `/shared/${presentation.id}`, variant: "default" },
+              ]}
+            />
           ))}
         </section>
       ) : null}

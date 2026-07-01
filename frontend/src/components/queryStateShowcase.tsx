@@ -188,7 +188,7 @@ export function QueryStateShowcase() {
                   updateContextMutation.mutate({
                     contextId,
                     prompt: `${promptInput} (updated)`,
-                    deletedFilesIds: [],
+                    deletedFilesNames: [],
                   });
                 }}
                 disabled={

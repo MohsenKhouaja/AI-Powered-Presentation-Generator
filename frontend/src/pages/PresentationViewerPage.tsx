@@ -1,16 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { MarkdownRenderer } from "@/components/markdownRenderer";
-import {
-  AlertCircleIcon,
-  ArrowLeftIcon,
-  ArrowRightIcon,
-  PencilIcon,
-} from "lucide-react";
+import { AlertCircleIcon, PencilIcon } from "lucide-react";
 import { usePresentationDetailQuery } from "@/hooks/queries/usePresentations";
 import { usePresentationSlidesQuery } from "@/hooks/queries/useSlides";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { Spinner } from "@/components/ui/spinner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
@@ -19,7 +12,8 @@ import {
   EmptyHeader,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { SlideThemeBoundary } from "@/components/app/SlideThemeBoundary";
+import { SlideCanvas } from "@/components/SlideCanvas";
+import { SlideNavigationFooter } from "@/components/SlideNavigationFooter";
 
 export function PresentationViewerPage() {
   const { id } = useParams<{ id: string }>();
@@ -27,10 +21,6 @@ export function PresentationViewerPage() {
   const detailQuery = usePresentationDetailQuery(id ?? null, Boolean(id));
   const slidesQuery = usePresentationSlidesQuery(id ?? null, Boolean(id));
   const [slideIndex, setSlideIndex] = useState(0);
-
-  // 16:9 scale refs
-  const slideWrapperRef = useRef<HTMLDivElement>(null);
-  const [slideScale, setSlideScale] = useState(1);
 
   const slides = useMemo(() => slidesQuery.data ?? [], [slidesQuery.data]);
 
@@ -52,17 +42,6 @@ export function PresentationViewerPage() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [navigate, slides.length]);
-
-  // Keep scale in sync with wrapper width
-  useEffect(() => {
-    const el = slideWrapperRef.current;
-    if (!el) return;
-    const update = () => setSlideScale(el.offsetWidth / 1280);
-    update();
-    const ro = new ResizeObserver(update);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
 
   if (detailQuery.isPending || slidesQuery.isPending) {
     return (
@@ -108,7 +87,6 @@ export function PresentationViewerPage() {
   }
 
   const currentSlide = slides[slideIndex];
-  const progressValue = ((slideIndex + 1) / slides.length) * 100;
 
   return (
     <main
@@ -133,61 +111,20 @@ export function PresentationViewerPage() {
             </div>
           </header>
 
-          {/* 16:9 slide canvas — no scrollbars, fully scaled to fit */}
-          <div
-            ref={slideWrapperRef}
-            className="relative w-full overflow-hidden rounded-xl border shadow-sm"
-            style={{ paddingBottom: "56.25%" }}
-          >
-            <div
-              className="absolute top-0 left-0 origin-top-left overflow-hidden"
-              style={{
-                width: 1280,
-                height: 720,
-                transform: `scale(${slideScale})`,
-              }}
-            >
-              <SlideThemeBoundary className="h-full w-full p-16">
-                <div className="prose prose-neutral max-w-none dark:prose-invert">
-                  <MarkdownRenderer content={currentSlide.content} />
-                </div>
-              </SlideThemeBoundary>
-            </div>
-          </div>
+          <SlideCanvas content={currentSlide.content} />
         </div>
       </section>
 
-      <footer className="sticky bottom-0 border-t bg-background/95 px-4 py-3 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-4xl flex-wrap items-center gap-3">
-          <Button
-            variant="outline"
-            onClick={() => setSlideIndex((current) => Math.max(current - 1, 0))}
-            disabled={slideIndex === 0}
-            aria-label="Previous slide"
-          >
-            <ArrowLeftIcon className="size-4" />
-          </Button>
-          <div className="min-w-[100px] text-sm text-muted-foreground">
-            {slideIndex + 1}/{slides.length}
-          </div>
-          <Progress
-            value={progressValue}
-            className="h-2 min-w-[150px] flex-1"
-          />
-          <Button
-            variant="outline"
-            onClick={() =>
-              setSlideIndex((current) =>
-                Math.min(current + 1, Math.max(slides.length - 1, 0)),
-              )
-            }
-            disabled={slideIndex >= slides.length - 1}
-            aria-label="Next slide"
-          >
-            <ArrowRightIcon className="size-4" />
-          </Button>
-        </div>
-      </footer>
+      <SlideNavigationFooter
+        slideIndex={slideIndex}
+        totalSlides={slides.length}
+        onPrevious={() => setSlideIndex((current) => Math.max(current - 1, 0))}
+        onNext={() =>
+          setSlideIndex((current) =>
+            Math.min(current + 1, Math.max(slides.length - 1, 0)),
+          )
+        }
+      />
     </main>
   );
 }
