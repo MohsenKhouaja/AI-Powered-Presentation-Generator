@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { queryKeys } from "@/lib/queryKeys";
 
@@ -41,6 +42,7 @@ export function useLoginMutation() {
         queryKey: queryKeys.presentations.all(),
       });
     },
+    onError: () => toast.error("Invalid email or password"),
   });
 }
 
@@ -60,6 +62,7 @@ export function useRegisterMutation() {
         queryKey: queryKeys.presentations.all(),
       });
     },
+    onError: () => toast.error("Could not create account"),
   });
 }
 
@@ -80,5 +83,6 @@ export function useLogoutMutation() {
         queryKey: queryKeys.auth.session(),
       });
     },
+    onError: () => toast.error("Failed to sign out"),
   });
 }

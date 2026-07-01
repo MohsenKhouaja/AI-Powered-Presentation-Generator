@@ -23,7 +23,6 @@ export function AuthForm() {
   const loginMutation = useLoginMutation();
   const registerMutation = useRegisterMutation();
   const activeMutation = mode === "login" ? loginMutation : registerMutation;
-  const mutationError = activeMutation.error;
   const pending = activeMutation.isPending;
   const changeMode = () => {
     if (mode === "login") {
@@ -128,13 +127,6 @@ export function AuthForm() {
                   {formError ? (
                     <p className="text-sm text-destructive">{formError}</p>
                   ) : null}
-                  {mutationError && !formError ? (
-                    <p className="text-sm text-destructive">
-                      {mutationError instanceof Error
-                        ? mutationError.message
-                        : "Unable to sign in"}
-                    </p>
-                  ) : null}
                   <Button
                     className="w-full h-11 text-[clamp(14px,base,20px)] font-semibold transition-all active:scale-[0.98]"
                     disabled={pending}
@@ -194,13 +186,6 @@ export function AuthForm() {
                 <div className="w-full space-y-2">
                   {formError ? (
                     <p className="text-sm text-destructive">{formError}</p>
-                  ) : null}
-                  {mutationError && !formError ? (
-                    <p className="text-sm text-destructive">
-                      {mutationError instanceof Error
-                        ? mutationError.message
-                        : "Unable to create account"}
-                    </p>
                   ) : null}
                   <Button
                     className="w-full h-11 text-[clamp(14px,base,20px)] font-semibold transition-all active:scale-[0.98]"

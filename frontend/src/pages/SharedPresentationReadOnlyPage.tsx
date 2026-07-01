@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { MarkdownRenderer } from "@/components/markdownRenderer";
 import {
-  AlertCircleIcon,
   LockIcon,
 } from "lucide-react";
 import { usePresentationDetailQuery } from "@/hooks/queries/usePresentations";
@@ -10,7 +9,6 @@ import { usePresentationSlidesQuery } from "@/hooks/queries/useSlides";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Empty,
   EmptyDescription,
@@ -60,16 +58,9 @@ export function SharedPresentationReadOnlyPage() {
   }
 
   if (detailQuery.isError || slidesQuery.isError || !detailQuery.data) {
-    const error = detailQuery.error ?? slidesQuery.error;
     return (
       <main className="mx-auto min-h-screen w-full max-w-3xl p-6">
-        <Alert variant="destructive">
-          <AlertCircleIcon />
-          <AlertTitle>Failed to load shared presentation</AlertTitle>
-          <AlertDescription>
-            {error instanceof Error ? error.message : "Unknown error"}
-          </AlertDescription>
-        </Alert>
+        <p className="text-sm text-muted-foreground">Failed to load shared presentation.</p>
         <Button className="mt-4" asChild>
           <Link to="/shared">Back to shared list</Link>
         </Button>

@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 interface EditorToolbarProps {
   presentationId: string;
   titleDraft: string;
-  editorError: string | null;
   isPreviewVisible: boolean;
   onTitleChange: (title: string) => void;
   onTogglePreview: () => void;
@@ -18,7 +17,6 @@ interface EditorToolbarProps {
 export function EditorHeader({
   presentationId,
   titleDraft,
-  editorError,
   isPreviewVisible,
   onTitleChange,
   onTogglePreview,
@@ -58,9 +56,6 @@ export function EditorHeader({
           </Button>
         </div>
       </div>
-      {editorError ? (
-        <p className="mt-1 text-xs text-destructive">{editorError}</p>
-      ) : null}
     </header>
   );
 }

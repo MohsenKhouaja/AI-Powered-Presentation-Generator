@@ -1,8 +1,7 @@
 import { useMemo } from "react";
-import { AlertCircleIcon, Share2Icon } from "lucide-react";
+import { Share2Icon } from "lucide-react";
 import { usePresentationsQuery } from "@/hooks/queries/usePresentations";
 import { Spinner } from "@/components/ui/spinner";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Empty,
   EmptyDescription,
@@ -36,18 +35,6 @@ export function SharedPresentationsPage() {
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Spinner /> Loading shared presentations...
         </div>
-      ) : null}
-
-      {presentationsQuery.isError ? (
-        <Alert variant="destructive">
-          <AlertCircleIcon />
-          <AlertTitle>Failed to load shared presentations</AlertTitle>
-          <AlertDescription>
-            {presentationsQuery.error instanceof Error
-              ? presentationsQuery.error.message
-              : "Unexpected error while loading shared presentations."}
-          </AlertDescription>
-        </Alert>
       ) : null}
 
       {presentationsQuery.isSuccess && sharedPresentations.length === 0 ? (

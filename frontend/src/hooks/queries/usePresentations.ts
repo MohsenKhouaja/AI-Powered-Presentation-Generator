@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { useApiClient } from "@/hooks/useApiClient";
 import { queryKeys } from "@/lib/queryKeys";
 
@@ -77,6 +78,7 @@ export function useCreatePresentationMutation() {
         queryKey: queryKeys.presentations.all(),
       });
     },
+    onError: () => toast.error("Could not create presentation"),
   });
 }
 
@@ -97,6 +99,7 @@ export function useUpdatePresentationMutation() {
         queryKey: queryKeys.presentations.detail(updatedPresentation.id),
       });
     },
+    onError: () => toast.error("Could not save presentation"),
   });
 }
 
@@ -115,5 +118,6 @@ export function useDeletePresentationMutation() {
         queryKey: queryKeys.presentations.detail(presentationId),
       });
     },
+    onError: () => toast.error("Could not delete presentation"),
   });
 }

@@ -36,7 +36,6 @@ export function useEditorState() {
   const [draftById, setDraftById] = useState<Record<string, string>>({});
   const [lastSavedById, setLastSavedById] = useState<Record<string, string>>({});
   const [isSavedVisible, setIsSavedVisible] = useState(false);
-  const [editorError, setEditorError] = useState<string | null>(null);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [deletedFilesNames, setDeletedFilesNames] = useState<string[]>([]);
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
@@ -143,13 +142,12 @@ export function useEditorState() {
     if (lastSavedById[slideId] === content) return;
     if (savingSlidesRef.current.has(slideId)) return;
     savingSlidesRef.current.add(slideId);
-    setEditorError(null);
     try {
       await updateSlideMutation.mutateAsync({ slideId, content });
       setLastSavedById((current) => ({ ...current, [slideId]: content }));
       if (showNotice) showSavedNotice();
-    } catch (error) {
-      setEditorError(error instanceof Error ? error.message : "Failed to save slide");
+    } catch {
+      // error handled by mutation onError toast
     } finally {
       savingSlidesRef.current.delete(slideId);
     }
@@ -178,8 +176,8 @@ export function useEditorState() {
         [createdSlide.id]: createdSlide.content ?? "",
       }));
       setSelectedSlideIndex(slides.length);
-    } catch (error) {
-      setEditorError(error instanceof Error ? error.message : "Failed to add slide");
+    } catch {
+      // error handled by mutation onError toast
     }
   };
 
@@ -199,8 +197,8 @@ export function useEditorState() {
         return next;
       });
       setSelectedSlideIndex(Math.max(deletingIndex - 1, 0));
-    } catch (error) {
-      setEditorError(error instanceof Error ? error.message : "Failed to delete slide");
+    } catch {
+      // error handled by mutation onError toast
     }
   };
 
@@ -241,8 +239,8 @@ export function useEditorState() {
         const nextIndex = nextSlides.findIndex((slide) => slide.id === selectedId);
         if (nextIndex >= 0) setSelectedSlideIndex(nextIndex);
       }
-    } catch (error) {
-      setEditorError(error instanceof Error ? error.message : "Failed to reorder slides");
+    } catch {
+      // error handled by mutation onError toast
     } finally {
       setDraggingSlideId(null);
       setDragOverSlideId(null);
@@ -317,7 +315,6 @@ export function useEditorState() {
 
   const onGenerateSlides = async () => {
     if (!activeContextId) return;
-    setEditorError(null);
     const parsed = numSlides.trim() !== "" ? Number(numSlides) : undefined;
     try {
       await generateSlidesMutation.mutateAsync({
@@ -327,8 +324,8 @@ export function useEditorState() {
       setDraftById({});
       setLastSavedById({});
       setSelectedSlideIndex(0);
-    } catch (error) {
-      setEditorError(error instanceof Error ? error.message : "Failed to generate slides");
+    } catch {
+      // error handled by mutation onError toast
     }
   };
 
@@ -353,7 +350,6 @@ export function useEditorState() {
     safeSelectedSlideIndex,
     isPreviewVisible,
     isSavedVisible,
-    editorError,
     previewWrapperRef,
     previewScale,
     pendingFiles,

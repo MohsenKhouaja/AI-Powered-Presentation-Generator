@@ -1,8 +1,7 @@
 import { Link } from "react-router-dom";
-import { AlertCircleIcon, Share2Icon } from "lucide-react";
+import { Share2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useEditorState } from "@/components/editor/useEditorState";
 import { EditorHeader } from "@/components/editor/EditorHeader";
 import { SlideList } from "@/components/editor/SlideList";
@@ -33,16 +32,9 @@ export function PresentationEditorPage() {
   }
 
   if (state.detailQuery.isError || state.slidesQuery.isError || !state.detailQuery.data) {
-    const error = state.detailQuery.error ?? state.slidesQuery.error;
     return (
       <main className="mx-auto min-h-screen w-full max-w-3xl p-6">
-        <Alert variant="destructive">
-          <AlertCircleIcon />
-          <AlertTitle>Failed to open editor</AlertTitle>
-          <AlertDescription>
-            {error instanceof Error ? error.message : "Unknown error"}
-          </AlertDescription>
-        </Alert>
+        <p className="text-sm text-muted-foreground">Failed to open editor.</p>
         <Button className="mt-4" asChild>
           <Link to="/dashboard">Back to dashboard</Link>
         </Button>
@@ -59,7 +51,6 @@ export function PresentationEditorPage() {
     safeSelectedSlideIndex,
     isPreviewVisible,
     isSavedVisible,
-    editorError,
     pendingFiles,
     isShareDialogOpen,
     inviteEmail,
@@ -97,8 +88,6 @@ export function PresentationEditorPage() {
     onMarkdownChange,
   } = state;
 
-  const mutationError = createContextMutation.error ?? updateContextMutation.error;
-
   return (
     <main
       className="mx-auto w-full max-w-7xl space-y-4 p-4 md:p-6"
@@ -107,7 +96,6 @@ export function PresentationEditorPage() {
       <EditorHeader
         presentationId={detailQuery.data.id}
         titleDraft={titleDraft}
-        editorError={editorError}
         isPreviewVisible={isPreviewVisible}
         onTitleChange={setTitleOverride}
         onTogglePreview={() => setIsPreviewVisible((current) => !current)}
@@ -139,7 +127,6 @@ export function PresentationEditorPage() {
             isUpdating={updateContextMutation.isPending}
             isGenerating={generateSlidesMutation.isPending}
             numSlides={numSlides}
-            mutationError={mutationError}
             onPromptChange={setPromptDraft}
             onPickFiles={onPickFiles}
             onRemovePendingFile={(file) => state.setPendingFiles((current) => current.filter((c) => c !== file))}

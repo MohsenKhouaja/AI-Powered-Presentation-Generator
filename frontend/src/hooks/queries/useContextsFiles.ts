@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { useApiClient } from "@/hooks/useApiClient";
 import { queryKeys } from "@/lib/queryKeys";
 import { usePresentationDetailQuery } from "@/hooks/queries/usePresentations";
@@ -130,6 +131,7 @@ export function useCreateContextMutation() {
         queryKey: queryKeys.presentations.details(),
       });
     },
+    onError: () => toast.error("Could not save context"),
   });
 }
 
@@ -171,5 +173,6 @@ export function useUpdateContextMutation() {
         queryKey: queryKeys.presentations.details(),
       });
     },
+    onError: () => toast.error("Could not update context"),
   });
 }

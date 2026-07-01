@@ -1,4 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { Toaster } from "sonner";
 import { ThemeProvider } from "./context/ThemeProvider";
 import { AuthProvider } from "./context/AuthProvider";
 import { AppShellLayout } from "./components/app/AppShellLayout";
@@ -47,6 +48,7 @@ export default function App() {
             <Route path="/404" element={<NotFoundPage />} />
             <Route path="*" element={<Navigate to="/404" replace />} />
           </Routes>
+          <Toaster richColors/>
         </BrowserRouter>
       </AuthProvider>
     </ThemeProvider>

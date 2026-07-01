@@ -38,10 +38,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ...options,
       });
       if (!response.ok) {
-        let errorMessage = `${response.status}: ${response.statusText}`;
+        const body = await response.json().catch(() => null);
+        const message = body?.error?.message || body?.error || body?.message || "Request failed";
         setToken(null);
         setIsLoading(false);
-        throw new Error(errorMessage);
+        throw new Error(message);
       }
       const tokenPayload = await response.json();
       const parsedToken = extractAccessToken(tokenPayload);
@@ -158,9 +159,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     if (!response.ok) {
-      throw new Error(
-        `Request failed: ${response.status} ${response.statusText}`,
-      );
+      const body = await response.json().catch(() => null);
+      const message = body?.error?.message || body?.error || body?.message || "Request failed";
+      throw new Error(message);
     }
     return response;
   };

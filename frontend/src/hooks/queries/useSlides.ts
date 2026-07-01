@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { useApiClient } from "@/hooks/useApiClient";
 import { queryKeys } from "@/lib/queryKeys";
 
@@ -78,6 +79,7 @@ export function useCreateSlideMutation(presentationId: string | null) {
         },
       );
     },
+    onError: () => toast.error("Could not add slide"),
   });
 }
 
@@ -111,6 +113,7 @@ export function useUpdateSlideContentMutation(presentationId: string | null) {
           ),
       );
     },
+    onError: () => toast.error("Could not save slide"),
   });
 }
 
@@ -137,6 +140,7 @@ export function useDeleteSlideMutation(presentationId: string | null) {
         queryKey: queryKeys.slides.byPresentation(presentationId),
       });
     },
+    onError: () => toast.error("Could not delete slide"),
   });
 }
 
@@ -183,6 +187,7 @@ export function useReorderSlidesMutation(presentationId: string | null) {
         },
       );
     },
+    onError: () => toast.error("Could not reorder slides"),
   });
 }
 
@@ -216,5 +221,6 @@ export function useGenerateSlidesFromContextMutation(
         generatedSlides,
       );
     },
+    onError: () => toast.error("Could not generate slides"),
   });
 }

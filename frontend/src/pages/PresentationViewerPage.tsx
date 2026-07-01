@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { AlertCircleIcon, PencilIcon } from "lucide-react";
+import { PencilIcon } from "lucide-react";
 import { usePresentationDetailQuery } from "@/hooks/queries/usePresentations";
 import { usePresentationSlidesQuery } from "@/hooks/queries/useSlides";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Empty,
   EmptyDescription,
@@ -54,16 +53,9 @@ export function PresentationViewerPage() {
   }
 
   if (detailQuery.isError || slidesQuery.isError) {
-    const error = detailQuery.error ?? slidesQuery.error;
     return (
       <main className="mx-auto min-h-screen w-full max-w-3xl p-6">
-        <Alert variant="destructive">
-          <AlertCircleIcon />
-          <AlertTitle>Failed to load presentation</AlertTitle>
-          <AlertDescription>
-            {error instanceof Error ? error.message : "Unknown error"}
-          </AlertDescription>
-        </Alert>
+        <p className="text-sm text-muted-foreground">Failed to load presentation.</p>
         <Button className="mt-4" asChild>
           <Link to="/dashboard">Back to dashboard</Link>
         </Button>

@@ -5,8 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircleIcon, SaveIcon } from "lucide-react";
+import { SaveIcon } from "lucide-react";
 
 interface SidebarContextProps {
   activeContextId: string | null;
@@ -17,7 +16,6 @@ interface SidebarContextProps {
   isUpdating: boolean;
   isGenerating: boolean;
   numSlides: string;
-  mutationError: Error | null;
   onPromptChange: (value: string) => void;
   onPickFiles: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onRemovePendingFile: (file: File) => void;
@@ -36,7 +34,6 @@ export function SidebarContext({
   isUpdating,
   isGenerating,
   numSlides,
-  mutationError,
   onPromptChange,
   onPickFiles,
   onRemovePendingFile,
@@ -99,13 +96,6 @@ export function SidebarContext({
           </Button>
         </div>
       </form>
-      {mutationError ? (
-        <Alert variant="destructive" className="mt-3">
-          <AlertCircleIcon />
-          <AlertTitle>Context save failed</AlertTitle>
-          <AlertDescription>{mutationError instanceof Error ? mutationError.message : "Unknown error"}</AlertDescription>
-        </Alert>
-      ) : null}
     </div>
   );
 }

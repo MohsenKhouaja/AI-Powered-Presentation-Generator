@@ -1,14 +1,12 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  AlertCircleIcon,
   FileTextIcon,
   PlusCircleIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Empty,
   EmptyDescription,
@@ -87,34 +85,10 @@ export function DashboardPage() {
         </Button>
       </form>
 
-      {createMutation.isError ? (
-        <Alert variant="destructive">
-          <AlertCircleIcon />
-          <AlertTitle>Could not create presentation</AlertTitle>
-          <AlertDescription>
-            {createMutation.error instanceof Error
-              ? createMutation.error.message
-              : "Unexpected error while creating presentation."}
-          </AlertDescription>
-        </Alert>
-      ) : null}
-
       {presentationsQuery.isPending ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Spinner /> Loading presentations...
         </div>
-      ) : null}
-
-      {presentationsQuery.isError ? (
-        <Alert variant="destructive">
-          <AlertCircleIcon />
-          <AlertTitle>Failed to load presentations</AlertTitle>
-          <AlertDescription>
-            {presentationsQuery.error instanceof Error
-              ? presentationsQuery.error.message
-              : "Unexpected error while loading presentations."}
-          </AlertDescription>
-        </Alert>
       ) : null}
 
       {presentationsQuery.isSuccess ? (
