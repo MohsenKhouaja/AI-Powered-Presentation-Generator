@@ -15,6 +15,13 @@ import { UPLOAD_PATH } from "./config/uploads.js";
 
 dotenv.config();
 
+const missingEnvVars = [];
+if (!process.env.JWT_ACCESS_TOKEN_SECRET_KEY) missingEnvVars.push("JWT_ACCESS_TOKEN_SECRET_KEY");
+if (!process.env.JWT_REFRESH_TOKEN_SECRET_KEY) missingEnvVars.push("JWT_REFRESH_TOKEN_SECRET_KEY");
+if (missingEnvVars.length > 0) {
+  throw new Error(`Missing required env var(s): ${missingEnvVars.join(", ")}`);
+}
+
 mkdirSync(UPLOAD_PATH, { recursive: true });
 
 const app = express();
