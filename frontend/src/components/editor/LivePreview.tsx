@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { MarkdownRenderer } from "@/components/markdownRenderer";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SlideThemeBoundary } from "@/components/app/SlideThemeBoundary";
 
 interface LivePreviewProps {
@@ -27,31 +26,27 @@ export function LivePreview({ content, visible }: LivePreviewProps) {
   if (!visible) return null;
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="text-base">Live Preview</CardTitle>
-      </CardHeader>
-      <CardContent>
+    <div className="flex flex-col gap-2 rounded-lg border border-border bg-background p-4">
+      <p className="text-xs font-medium text-muted-foreground">Preview</p>
+      <div
+        ref={wrapperRef}
+        className="relative w-full overflow-hidden rounded border aspect-video"
+      >
         <div
-          ref={wrapperRef}
-          className="relative w-full overflow-hidden rounded border aspect-video"
+          className="absolute top-0 left-0 origin-top-left overflow-hidden"
+          style={{
+            width: 1280,
+            height: 720,
+            transform: `scale(${scale})`,
+          }}
         >
-          <div
-            className="absolute top-0 left-0 origin-top-left overflow-hidden"
-            style={{
-              width: 1280,
-              height: 720,
-              transform: `scale(${scale})`,
-            }}
-          >
-            <SlideThemeBoundary className="h-full w-full p-12">
-              <div className="prose prose-neutral max-w-none dark:prose-invert">
-                <MarkdownRenderer content={content} />
-              </div>
-            </SlideThemeBoundary>
-          </div>
+          <SlideThemeBoundary className="h-full w-full p-12">
+            <div className="prose prose-neutral max-w-none dark:prose-invert">
+              <MarkdownRenderer content={content} />
+            </div>
+          </SlideThemeBoundary>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

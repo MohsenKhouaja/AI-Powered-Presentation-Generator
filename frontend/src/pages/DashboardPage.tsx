@@ -94,11 +94,8 @@ export function DashboardPage() {
       {presentationsQuery.isSuccess ? (
         <div className="space-y-10">
           <section className="space-y-4" aria-label="Owned presentations">
-            <header className="space-y-2">
-              <p className="text-sm font-medium text-[color:var(--color-gravel)] font-[var(--font-inter)]">
-                Owned
-              </p>
-              <h3 className="font-[var(--font-waldenburg)] text-[32px] leading-[1.17] tracking-[-0.02em] text-[color:var(--color-obsidian)]">
+            <header>
+              <h3 className="text-2xl font-semibold tracking-tight text-foreground">
                 Your presentations
               </h3>
             </header>
@@ -136,11 +133,8 @@ export function DashboardPage() {
           </section>
 
           <section className="space-y-4" aria-label="Editable presentations">
-            <header className="space-y-2">
-              <p className="text-sm font-medium text-[color:var(--color-gravel)] font-[var(--font-inter)]">
-                Editable
-              </p>
-              <h3 className="font-[var(--font-waldenburg)] text-[32px] leading-[1.17] tracking-[-0.02em] text-[color:var(--color-obsidian)]">
+            <header>
+              <h3 className="text-2xl font-semibold tracking-tight text-foreground">
                 Shared with you
               </h3>
             </header>

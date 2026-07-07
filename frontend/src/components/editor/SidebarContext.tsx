@@ -1,7 +1,8 @@
 "use client";
 
-import { XIcon } from "lucide-react";
+import { SparklesIcon, XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -43,7 +44,7 @@ export function SidebarContext({
   onNumSlidesChange,
 }: SidebarContextProps) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-4">
+    <div className="rounded-lg border border-border bg-card p-4">
       <h3 className="mb-3 text-sm font-medium">Context</h3>
       <form onSubmit={onSaveContext} className="space-y-3">
         <Textarea
@@ -81,21 +82,25 @@ export function SidebarContext({
           {isCreating || isUpdating ? <Spinner className="mr-2" /> : <SaveIcon className="mr-2 size-4" />}
           Save Context
         </Button>
-        <div className="flex items-center gap-2">
-          <Input
-            type="number" min={1} max={50} placeholder="Slides (auto)" value={numSlides}
-            onChange={(e) => onNumSlidesChange(e.target.value)}
-            className="h-9 w-28 rounded-full border-border text-sm"
-          />
-          <Button
-            type="button" onClick={onGenerateSlides}
-            disabled={!activeContextId || isGenerating}
-            className="h-9 rounded-full border border-border bg-primary px-4 py-0 text-sm font-medium text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {isGenerating ? "Generating..." : "Generate slides"}
-          </Button>
-        </div>
       </form>
+
+      <Separator className="my-1" />
+
+      <div className="space-y-2">
+        <p className="text-xs font-medium text-muted-foreground">Generate</p>
+        <Input
+          type="number" min={1} max={50} placeholder="Number of slides" value={numSlides}
+          onChange={(e) => onNumSlidesChange(e.target.value)}
+        />
+        <Button
+          type="button" onClick={onGenerateSlides}
+          className="w-full"
+          disabled={!activeContextId || isGenerating}
+        >
+          <SparklesIcon className="mr-2 size-4" />
+          {isGenerating ? "Generating..." : "Generate slides"}
+        </Button>
+      </div>
     </div>
   );
 }

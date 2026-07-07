@@ -16,7 +16,7 @@ export function AppShellLayout() {
   return (
     <div className="grid min-h-screen grid-cols-1 md:grid-cols-[220px_1fr]">
       <aside className="border-r bg-muted/20 p-4" aria-label="Sidebar">
-        <p className="px-2 pb-3 text-sm font-semibold tracking-wide">P2M</p>
+        <p className="px-2 pb-3 text-sm font-semibold tracking-wide">MarkDeck</p>
         <nav className="space-y-1" aria-label="Primary navigation">
           {navItems.map((item) => {
             const Icon = item.icon;

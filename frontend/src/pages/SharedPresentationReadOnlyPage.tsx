@@ -106,15 +106,17 @@ export function SharedPresentationReadOnlyPage() {
             </div>
           </header>
 
-           <SlideThemeBoundary className="rounded-xl border bg-card p-6 shadow-sm md:p-10">
-             <div className="prose prose-neutral max-w-none dark:prose-invert">
-                <MarkdownRenderer content={currentSlide.content ?? ""} />
-             </div>
-           </SlideThemeBoundary>
+           <div role="region" aria-live="polite" aria-atomic="true" aria-label={`Slide ${slideIndex + 1} of ${slides.length}`}>
+             <SlideThemeBoundary className="rounded-xl border bg-card p-6 shadow-sm md:p-10">
+               <div className="prose prose-neutral max-w-none dark:prose-invert">
+                  <MarkdownRenderer content={currentSlide.content ?? ""} />
+               </div>
+             </SlideThemeBoundary>
+           </div>
 
           {detailQuery.data.context?.files && detailQuery.data.context.files.length > 0 && (
             <section className="mt-6">
-              <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                 Reference Files
               </h2>
               <div className="flex flex-wrap gap-4">

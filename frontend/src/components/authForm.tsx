@@ -58,13 +58,13 @@ export function AuthForm() {
     }
   };
   return (
-    <div className="flex items-center justify-center min-h-screen p-4">
+    <div className="flex w-full items-center justify-center p-4">
       <Tabs
         value={mode}
         onValueChange={changeMode}
-        className="w-full max-w-[400px] min-h-[500px] flex flex-col"
+        className="w-full max-w-[400px] flex flex-col"
       >
-        <TabsList className="grid w-full grid-cols-2 mb-4 bg-muted/50 shrink-0 text-[clamp(12px,1rem,18px)]">
+        <TabsList className="grid w-full grid-cols-2 mb-4 bg-muted/50 shrink-0 text-sm">
           <TabsTrigger
             value="login"
             className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
@@ -79,12 +79,12 @@ export function AuthForm() {
           </TabsTrigger>
         </TabsList>
         <TabsContent value="login" className="flex-1 mt-0">
-          <Card className="shadow-2xl border-border/50 bg-card/80 backdrop-blur-sm h-full flex flex-col">
+          <Card className="border bg-card h-full flex flex-col">
             <CardHeader className="space-y-1">
-              <CardTitle className="text-[clamp(20px,2xl,32px)] font-bold tracking-tight">
+              <CardTitle className="text-2xl font-bold tracking-tight">
                 Welcome back
               </CardTitle>
-              <CardDescription className="text-[clamp(12px,1rem,18px)] text-muted-foreground">
+              <CardDescription className="text-sm text-muted-foreground">
                 Enter your email to sign in to your account
               </CardDescription>
             </CardHeader>
@@ -93,31 +93,31 @@ export function AuthForm() {
                 <div className="grid gap-2">
                   <Label
                     htmlFor="email"
-                    className="text-[clamp(10px,sm,16px)] font-medium uppercase tracking-wider text-muted-foreground/80"
-                  >
-                    Email
-                  </Label>
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    placeholder="name@example.com"
-                    className="bg-background/50 border-border focus:ring-primary h-11"
+                      className="text-xs font-medium uppercase tracking-wider text-muted-foreground"
+                    >
+                      Email
+                    </Label>
+                    <Input
+                      id="email"
+                      name="email"
+                      type="email"
+                      placeholder="name@example.com"
+                      className="bg-background/50"
                     required
                   />
                 </div>
                 <div className="grid gap-2">
                   <Label
                     htmlFor="password"
-                    className="text-[clamp(10px,sm,16px)] font-medium uppercase tracking-wider text-muted-foreground/80"
-                  >
-                    Password
-                  </Label>
-                  <Input
-                    id="password"
-                    name="password"
-                    type="password"
-                    className="bg-background/50 border-border focus:ring-primary h-11"
+                      className="text-xs font-medium uppercase tracking-wider text-muted-foreground"
+                    >
+                      Password
+                    </Label>
+                    <Input
+                      id="password"
+                      name="password"
+                      type="password"
+                      className="bg-background/50"
                     required
                   />
                 </div>
@@ -125,11 +125,12 @@ export function AuthForm() {
               <CardFooter className="mt-auto pt-6">
                 <div className="w-full space-y-2">
                   {formError ? (
-                    <p className="text-sm text-destructive">{formError}</p>
+                    <p id="login-error" role="alert" className="text-sm text-destructive">{formError}</p>
                   ) : null}
                   <Button
-                    className="w-full h-11 text-[clamp(14px,base,20px)] font-semibold transition-all active:scale-[0.98]"
+                    className="w-full"
                     disabled={pending}
+                    aria-describedby={formError ? "login-error" : undefined}
                   >
                     {pending ? "Signing in..." : "Sign In"}
                   </Button>
@@ -139,12 +140,12 @@ export function AuthForm() {
           </Card>
         </TabsContent>
         <TabsContent value="signup" className="flex-1 mt-0">
-          <Card className="shadow-2xl border-border/50 bg-card/80 backdrop-blur-sm h-full flex flex-col">
+          <Card className="border bg-card h-full flex flex-col">
             <CardHeader className="space-y-1">
-              <CardTitle className="text-[clamp(20px,2xl,32px)] font-bold tracking-tight">
+              <CardTitle className="text-2xl font-bold tracking-tight">
                 Create an account
               </CardTitle>
-              <CardDescription className="text-[clamp(12px,1rem,18px)] text-muted-foreground">
+              <CardDescription className="text-sm text-muted-foreground">
                 Enter your details to get started
               </CardDescription>
             </CardHeader>
@@ -153,23 +154,23 @@ export function AuthForm() {
                 <div className="grid gap-2">
                   <Label
                     htmlFor="signup-email"
-                    className="text-[clamp(10px,sm,16px)] font-medium uppercase tracking-wider text-muted-foreground/80"
-                  >
-                    Email
-                  </Label>
-                  <Input
-                    id="signup-email"
+                    className="text-xs font-medium uppercase tracking-wider text-muted-foreground"
+                    >
+                      Email
+                    </Label>
+                    <Input
+                      id="signup-email"
                     name="email"
                     type="email"
                     placeholder="name@example.com"
-                    className="bg-background/50 h-11"
+                    className="bg-background/50"
                     required
                   />
                 </div>
                 <div className="grid gap-2">
                   <Label
                     htmlFor="signup-password"
-                    className="text-[clamp(10px,sm,16px)] font-medium uppercase tracking-wider text-muted-foreground/80"
+                    className="text-xs font-medium uppercase tracking-wider text-muted-foreground"
                   >
                     Password
                   </Label>
@@ -177,7 +178,7 @@ export function AuthForm() {
                     id="signup-password"
                     name="password"
                     type="password"
-                    className="bg-background/50 h-11"
+                    className="bg-background/50"
                     required
                   />
                 </div>
@@ -185,11 +186,12 @@ export function AuthForm() {
               <CardFooter className="mt-auto pt-6">
                 <div className="w-full space-y-2">
                   {formError ? (
-                    <p className="text-sm text-destructive">{formError}</p>
+                    <p id="signup-error" role="alert" className="text-sm text-destructive">{formError}</p>
                   ) : null}
                   <Button
-                    className="w-full h-11 text-[clamp(14px,base,20px)] font-semibold transition-all active:scale-[0.98]"
+                    className="w-full"
                     disabled={pending}
+                    aria-describedby={formError ? "signup-error" : undefined}
                   >
                     {pending ? "Creating account..." : "Create Account"}
                   </Button>

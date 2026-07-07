@@ -24,7 +24,7 @@ export function EditorToolbar({
   onSave,
 }: EditorToolbarProps) {
   return (
-    <div className="flex h-10 w-full flex-shrink-0 items-center justify-between gap-2 rounded-2xl border border-border bg-background px-4">
+    <div className="flex h-10 w-full flex-shrink-0 items-center justify-between gap-2 rounded-lg border border-border bg-background px-4">
       <div className="flex items-center gap-1">
         <Button type="button" size="sm" variant="ghost" onClick={onAddSlide} className="h-8 px-3">
           <PlusIcon className="mr-1 size-4" /> Add slide

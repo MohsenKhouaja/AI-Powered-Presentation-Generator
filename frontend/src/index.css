@@ -30,12 +30,12 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --color-eggshell: #fdfcfc;
-  --color-powder: #f5f3f1;
-  --color-chalk: #e5e5e5;
-  --color-fog: #b1b0b0;
-  --color-gravel: #777169;
-  --color-slate: #a59f97;
+  --color-eggshell: #fefcfa;
+  --color-powder: #f7f3ef;
+  --color-chalk: #e8e4e2;
+  --color-fog: #b3b0ad;
+  --color-gravel: #797069;
+  --color-slate: #a69e99;
   --color-obsidian: #000000;
   --color-signal-blue: #0447ff;
   --color-ember: #ff4704;
@@ -119,5 +119,27 @@
   body {
     @apply bg-background text-foreground;
     letter-spacing: var(--tracking-normal);
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.6s cubic-bezier(0.25, 1, 0.5, 1) backwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in-up {
+    animation: none;
+    opacity: 1;
   }
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { Trash2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -45,17 +46,18 @@ export function PresentationCard({
   actions,
   className,
 }: PresentationCardProps) {
+  const formattedDate = useMemo(() => new Date(createdAt).toLocaleString(), [createdAt]);
   return (
     <Card
       key={id}
-      className={`rounded-[16px] bg-white shadow-[var(--shadow-subtle-7)] ${className ?? ""}`}
+      className={`rounded-xl bg-card shadow-sm ${className ?? ""}`}
     >
       <CardHeader>
         <CardTitle className="line-clamp-2 text-base">{title}</CardTitle>
       </CardHeader>
       <CardContent>
         <p className="text-sm text-muted-foreground">
-          Created {new Date(createdAt).toLocaleString()}
+          Created {formattedDate}
         </p>
         <Badge variant={badgeVariant} className="mt-2">
           {badgeLabel}

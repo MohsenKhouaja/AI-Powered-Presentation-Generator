@@ -36,11 +36,11 @@ export function SlideList({
   onDragLeave,
 }: SlideListProps) {
   return (
-    <section className="rounded-2xl border border-border bg-background">
+    <section className="rounded-lg border border-border bg-background">
       <div className="border-b border-border px-3 py-2">
         <p className="text-xs font-medium text-muted-foreground">Slides</p>
       </div>
-      <div className="max-h-[400px] space-y-1 overflow-y-auto p-2" role="tablist" aria-label="Slides">
+      <div className="max-h-[50vh] space-y-1 overflow-y-auto p-2" role="tablist" aria-label="Slides">
         {isGenerating ? (
           <div className="flex min-h-[120px] items-center justify-center">
             <span className="animate-pulse text-xs text-muted-foreground opacity-80">
@@ -55,7 +55,7 @@ export function SlideList({
               key={slide.id}
               className={`flex h-10 items-center gap-2 rounded px-2 text-sm text-foreground transition ${
                 draggingSlideId === slide.id
-                  ? "bg-muted shadow-[var(--shadow-subtle-2)]"
+                  ? "bg-muted shadow-sm"
                   : index === selectedSlideIndex
                     ? "bg-muted"
                     : "hover:bg-muted/60"
@@ -78,7 +78,7 @@ export function SlideList({
               </button>
               <button
                 type="button"
-                className="flex h-7 items-center justify-center rounded-[12px] border border-border bg-transparent px-2 text-muted-foreground"
+                className="flex h-full min-h-9 items-center justify-center rounded-lg border border-border bg-transparent px-3 text-muted-foreground"
                 draggable
                 onDragStart={onDragStart(slide.id)}
                 onDragEnd={onDragEnd}

@@ -87,8 +87,8 @@ export function PresentationViewerPage() {
     >
       <section className="mx-auto flex w-full max-w-6xl items-center p-4 md:p-8">
         <div className="w-full">
-          <header className="mb-4 flex items-center justify-between">
-            <h1 className="text-lg font-semibold md:text-xl">
+          <header className="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <h1 className="text-xl font-semibold">
               {detailQuery.data.title}
             </h1>
             <div className="flex items-center gap-2">
@@ -103,7 +103,9 @@ export function PresentationViewerPage() {
             </div>
           </header>
 
-          <SlideCanvas content={currentSlide.content} />
+          <div role="region" aria-live="polite" aria-atomic="true" aria-label={`Slide ${slideIndex + 1} of ${slides.length}`}>
+            <SlideCanvas content={currentSlide.content} />
+          </div>
         </div>
       </section>
 

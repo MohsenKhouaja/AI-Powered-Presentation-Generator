@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import { Share2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { useEditorState } from "@/components/editor/useEditorState";
@@ -11,12 +10,6 @@ import { LivePreview } from "@/components/editor/LivePreview";
 import { SidebarContext } from "@/components/editor/SidebarContext";
 import { SidebarTheme } from "@/components/editor/SidebarTheme";
 import { ShareDialog } from "@/components/editor/ShareDialog";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 
 export function PresentationEditorPage() {
   const state = useEditorState();
@@ -90,7 +83,7 @@ export function PresentationEditorPage() {
 
   return (
     <main
-      className="mx-auto w-full max-w-7xl space-y-4 p-4 md:p-6"
+      className="mx-auto flex w-full max-w-6xl flex-col gap-4 p-4 md:p-6"
       aria-label="Presentation editor"
     >
       <EditorHeader
@@ -102,8 +95,8 @@ export function PresentationEditorPage() {
         onOpenShare={() => setIsShareDialogOpen(true)}
       />
 
-      <div className="grid gap-4 xl:grid-cols-[320px_1fr]">
-        <aside className="space-y-4">
+      <div className="grid flex-1 gap-4 overflow-hidden xl:grid-cols-[320px_1fr]">
+        <aside className="flex flex-col gap-4 overflow-y-auto">
           <SlideList
             slides={slides}
             selectedSlideIndex={safeSelectedSlideIndex}
@@ -118,42 +111,30 @@ export function PresentationEditorPage() {
             onDragLeave={() => {}}
           />
 
-          <SidebarContext
-            activeContextId={activeContextId}
-            effectivePromptDraft={effectivePromptDraft}
-            pendingFiles={pendingFiles}
-            contextFiles={contextFilesQuery.data}
-            isCreating={createContextMutation.isPending}
-            isUpdating={updateContextMutation.isPending}
-            isGenerating={generateSlidesMutation.isPending}
-            numSlides={numSlides}
-            onPromptChange={setPromptDraft}
-            onPickFiles={onPickFiles}
-            onRemovePendingFile={(file) => state.setPendingFiles((current) => current.filter((c) => c !== file))}
-            onMarkFileForDeletion={(fileName) => state.setDeletedFilesNames((current) => [...current, fileName])}
-            onSaveContext={onSaveContext}
-            onGenerateSlides={onGenerateSlides}
-            onNumSlidesChange={setNumSlides}
-          />
+          <div className="flex flex-col gap-3">
+            <SidebarContext
+              activeContextId={activeContextId}
+              effectivePromptDraft={effectivePromptDraft}
+              pendingFiles={pendingFiles}
+              contextFiles={contextFilesQuery.data}
+              isCreating={createContextMutation.isPending}
+              isUpdating={updateContextMutation.isPending}
+              isGenerating={generateSlidesMutation.isPending}
+              numSlides={numSlides}
+              onPromptChange={setPromptDraft}
+              onPickFiles={onPickFiles}
+              onRemovePendingFile={(file) => state.setPendingFiles((current) => current.filter((c) => c !== file))}
+              onMarkFileForDeletion={(fileName) => state.setDeletedFilesNames((current) => [...current, fileName])}
+              onSaveContext={onSaveContext}
+              onGenerateSlides={onGenerateSlides}
+              onNumSlidesChange={setNumSlides}
+            />
 
-          <SidebarTheme />
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Sharing</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <p className="text-sm text-muted-foreground">
-                Invite collaborators from the Share action in the toolbar.
-              </p>
-              <Button variant="outline" className="w-full" onClick={() => setIsShareDialogOpen(true)}>
-                <Share2Icon className="mr-2 size-4" /> Open Share
-              </Button>
-            </CardContent>
-          </Card>
+            <SidebarTheme />
+          </div>
         </aside>
 
-        <section className="flex flex-col gap-3">
+        <section className="flex min-h-0 flex-col gap-4">
           <EditorToolbar
             hasCurrentSlide={!!currentSlide}
             isDeleting={deleteSlideMutation.isPending}
@@ -167,10 +148,7 @@ export function PresentationEditorPage() {
           <MarkdownEditor
             markdownDraft={markdownDraft}
             hasSlides={slides.length > 0}
-            isSavedVisible={isSavedVisible}
-            isSaving={updateSlideMutation.isPending}
             onMarkdownChange={onMarkdownChange}
-            onSave={onSaveSelectedSlide}
           />
 
           <LivePreview content={markdownDraft} visible={isPreviewVisible} />

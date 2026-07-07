@@ -81,7 +81,7 @@ export function MarkdownRenderer({ content }: { content: string }) {
 
           // --- 4. BLOCKQUOTE ---
           blockquote: ({ ...props }) => (
-            <div className="my-4 transform hover:scale-[1.01] transition-transform duration-300">
+            <div className="my-4">
               <Alert className="bg-accent/10 border-l-4 border-l-accent border-y-0 border-r-0 rounded-[var(--radius)] text-foreground shadow-sm">
                 <Info className="h-5 w-5 text-foreground" />
                 <AlertTitle

@@ -27,7 +27,7 @@ export function SharedPresentationsPage() {
       <section className="rounded-lg border p-4">
         <h2 className="text-lg font-semibold">Shared presentations</h2>
         <p className="text-sm text-muted-foreground">
-          Presentations you can access in read-only mode.
+          Presentations with edit access shared with you.
         </p>
       </section>
 

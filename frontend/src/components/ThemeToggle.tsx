@@ -13,12 +13,12 @@ export function ThemeToggle() {
       onClick={() => toggleTone(tone === "dark" ? "root" : "dark")}
     >
       <Sun
-        className={`h-[1.2rem] w-[1.2rem] transition-all duration-500 ease-in-out ${
+        className={`h-[1.2rem] w-[1.2rem] transition-all duration-200 ${
           isDark ? "-rotate-90 scale-0" : "rotate-0 scale-100"
         }`}
       />
       <Moon
-        className={`absolute h-[1.2rem] w-[1.2rem] transition-all duration-500 ease-in-out ${
+        className={`absolute h-[1.2rem] w-[1.2rem] transition-all duration-200 ${
           isDark ? "rotate-0 scale-100" : "rotate-90 scale-0"
         }`}
       />
