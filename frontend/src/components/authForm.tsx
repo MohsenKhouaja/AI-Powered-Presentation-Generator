@@ -64,23 +64,23 @@ export function AuthForm() {
         onValueChange={changeMode}
         className="w-full max-w-[400px] flex flex-col"
       >
-        <TabsList className="grid w-full grid-cols-2 mb-4 bg-muted/50 shrink-0 text-sm">
-          <TabsTrigger
-            value="login"
-            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-          >
-            Login
-          </TabsTrigger>
-          <TabsTrigger
-            value="signup"
-            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-          >
-            Sign Up
-          </TabsTrigger>
-        </TabsList>
         <TabsContent value="login" className="flex-1 mt-0">
           <Card className="border bg-card h-full flex flex-col">
-            <CardHeader className="space-y-1">
+            <CardHeader className="space-y-4">
+              <TabsList className="grid w-full grid-cols-2 bg-muted/50 shrink-0 text-sm">
+                <TabsTrigger
+                  value="login"
+                  className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                >
+                  Login
+                </TabsTrigger>
+                <TabsTrigger
+                  value="signup"
+                  className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                >
+                  Sign Up
+                </TabsTrigger>
+              </TabsList>
               <CardTitle className="text-2xl font-bold tracking-tight">
                 Welcome back
               </CardTitle>
@@ -141,7 +141,21 @@ export function AuthForm() {
         </TabsContent>
         <TabsContent value="signup" className="flex-1 mt-0">
           <Card className="border bg-card h-full flex flex-col">
-            <CardHeader className="space-y-1">
+            <CardHeader className="space-y-4">
+              <TabsList className="grid w-full grid-cols-2 bg-muted/50 shrink-0 text-sm">
+                <TabsTrigger
+                  value="login"
+                  className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                >
+                  Login
+                </TabsTrigger>
+                <TabsTrigger
+                  value="signup"
+                  className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                >
+                  Sign Up
+                </TabsTrigger>
+              </TabsList>
               <CardTitle className="text-2xl font-bold tracking-tight">
                 Create an account
               </CardTitle>
