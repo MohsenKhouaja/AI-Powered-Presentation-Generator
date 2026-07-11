@@ -1,0 +1,201 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-07T00:00:00.000Z",
+  "title": "Design System: MarkDeck",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Obsidian",
+        "canonical": "oklch(0.2050 0 0)",
+        "tonalRamp": ["oklch(0.05 0 0)", "oklch(0.10 0 0)", "oklch(0.15 0 0)", "oklch(0.2050 0 0)", "oklch(0.30 0 0)", "oklch(0.45 0 0)", "oklch(0.65 0 0)", "oklch(0.85 0 0)"]
+      },
+      "neutral-bg": {
+        "role": "neutral",
+        "displayName": "Eggshell",
+        "canonical": "#fefcfa",
+        "tonalRamp": ["#fcf8f4", "#fdf9f6", "#fdfaf7", "#fefbf8", "#fefbf9", "#fefcfa", "#fefdfb", "#fffefc"]
+      },
+      "neutral-surface": {
+        "role": "neutral",
+        "displayName": "Powder",
+        "canonical": "#f7f3ef",
+        "tonalRamp": ["#efebe6", "#f1ede8", "#f3efea", "#f5f1ec", "#f6f2ee", "#f7f3ef", "#f9f5f2", "#fbf8f6"]
+      },
+      "neutral-muted": {
+        "role": "neutral",
+        "displayName": "Chalk",
+        "canonical": "#e8e4e2",
+        "tonalRamp": ["#ddd9d7", "#e0dcd9", "#e2dedb", "#e5e1de", "#e6e2e0", "#e8e4e2", "#ece8e6", "#f0edeb"]
+      },
+      "neutral-border": {
+        "role": "neutral",
+        "displayName": "Chalk",
+        "canonical": "#e8e4e2",
+        "tonalRamp": ["#ddd9d7", "#e0dcd9", "#e2dedb", "#e5e1de", "#e6e2e0", "#e8e4e2", "#ece8e6", "#f0edeb"]
+      },
+      "neutral-foreground": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "oklch(0.1450 0 0)",
+        "tonalRamp": ["oklch(0.03 0 0)", "oklch(0.06 0 0)", "oklch(0.09 0 0)", "oklch(0.12 0 0)", "oklch(0.1450 0 0)", "oklch(0.25 0 0)", "oklch(0.40 0 0)", "oklch(0.60 0 0)"]
+      },
+      "neutral-muted-foreground": {
+        "role": "neutral",
+        "displayName": "Gravel",
+        "canonical": "#797069",
+        "tonalRamp": ["#6b635d", "#6e6660", "#716963", "#746c66", "#776e68", "#797069", "#7d756f", "#827a74"]
+      },
+      "neutral-chart": {
+        "role": "neutral",
+        "displayName": "Fog",
+        "canonical": "#b3b0ad",
+        "tonalRamp": ["#a5a29f", "#a8a5a2", "#aba8a5", "#aeaba8", "#b1aeab", "#b3b0ad", "#b7b4b2", "#bbb8b6"]
+      },
+      "neutral-ring": {
+        "role": "neutral",
+        "displayName": "Slate",
+        "canonical": "#a69e99",
+        "tonalRamp": ["#98928d", "#9a9490", "#9d9792", "#a19b96", "#a49e99", "#a69e99", "#aaa4a0", "#aeaaa6"]
+      },
+      "accent-red": {
+        "role": "accent",
+        "displayName": "Ember",
+        "canonical": "oklch(0.5770 0.2450 27.3250)",
+        "tonalRamp": ["oklch(0.20 0.08 27)", "oklch(0.30 0.12 27)", "oklch(0.40 0.16 27)", "oklch(0.50 0.20 27)", "oklch(0.5770 0.2450 27.3250)", "oklch(0.70 0.18 27)", "oklch(0.82 0.10 27)", "oklch(0.94 0.04 27)"]
+      },
+      "accent-blue": {
+        "role": "accent",
+        "displayName": "Signal Blue",
+        "canonical": "#0447ff",
+        "tonalRamp": ["#021a66", "#032399", "#032ecc", "#043cff", "#0447ff", "#3d6cff", "#7a99ff", "#b8c6ff"]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Slide titles on presentation canvases only."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "UI copy, descriptions, slide body text."
+      },
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "Code blocks in slides, technical content."
+      }
+    },
+    "shadows": [
+      { "name": "inset", "value": "0 1px 3px 0px hsl(0 0% 0% / 0.05)", "purpose": "Inset ring on interactive elements." },
+      { "name": "sm", "value": "0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 1px 2px -1px hsl(0 0% 0% / 0.10)", "purpose": "Resting state for cards and containers." },
+      { "name": "lg", "value": "0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 4px 6px -1px hsl(0 0% 0% / 0.10)", "purpose": "Dialog overlays and modal surfaces." },
+      { "name": "2xl", "value": "0 1px 3px 0px hsl(0 0% 0% / 0.25)", "purpose": "Slide preview canvas in the editor." }
+    ],
+    "motion": [
+      { "name": "ease-standard", "value": "cubic-bezier(0.4, 0, 0.2, 1)", "purpose": "Default easing for state transitions." },
+      { "name": "duration-fade", "value": "150ms", "purpose": "Fade transitions on dialog overlays." },
+      { "name": "duration-slide", "value": "200ms", "purpose": "Slide and zoom transitions on dialog content." },
+      { "name": "duration-hover", "value": "150ms", "purpose": "Button and link hover transitions." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" },
+      { "name": "2xl", "value": "1536px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The single call-to-action per viewport. Obsidian background, white text.",
+      "html": "<button class=\"ds-btn-primary\">Create Presentation</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; height: 2.25rem; padding: 0.5rem 1rem; background: oklch(0.2050 0 0); color: oklch(1 0 0); font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; font-weight: 500; border: none; border-radius: 0.625rem; cursor: pointer; transition: background 150ms cubic-bezier(0.4, 0, 0.2, 1); white-space: nowrap; } .ds-btn-primary:hover { background: oklch(0.1450 0 0); } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(4, 71, 255, 0.5); } .ds-btn-primary:disabled { opacity: 0.5; pointer-events: none; }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Secondary action. Transparent with a border stroke.",
+      "html": "<button class=\"ds-btn-outline\">Cancel</button>",
+      "css": ".ds-btn-outline { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; height: 2.25rem; padding: 0.5rem 1rem; background: transparent; color: oklch(0.1450 0 0); font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; font-weight: 500; border: 1px solid oklch(0.9220 0 0); border-radius: 0.625rem; cursor: pointer; transition: background 150ms cubic-bezier(0.4, 0, 0.2, 1), border-color 150ms cubic-bezier(0.4, 0, 0.2, 1); } .ds-btn-outline:hover { background: oklch(0.9700 0 0); } .ds-btn-outline:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(4, 71, 255, 0.5); } .ds-btn-outline:disabled { opacity: 0.5; pointer-events: none; }"
+    },
+    {
+      "name": "Default Card",
+      "kind": "card",
+      "refersTo": "card-default",
+      "description": "Container for presentation items on the dashboard. White background, 1rem radius, shadow at rest.",
+      "html": "<div class=\"ds-card\"><div class=\"ds-card-header\"><div class=\"ds-card-title\">My Presentation</div></div><div class=\"ds-card-content\"><p class=\"ds-card-text\">Created 7/7/2026</p></div><div class=\"ds-card-footer\"><button class=\"ds-btn-outline\">Open</button></div></div>",
+      "css": ".ds-card { display: flex; flex-direction: column; gap: 1.5rem; background: oklch(1 0 0); color: oklch(0.1450 0 0); border: 1px solid oklch(0.9220 0 0); border-radius: 1rem; padding: 1.5rem 0; box-shadow: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 1px 2px -1px hsl(0 0% 0% / 0.10); font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; } .ds-card-header { display: grid; grid-template-rows: auto auto; align-items: start; gap: 0.5rem; padding: 0 1.5rem; } .ds-card-title { font-weight: 600; line-height: 1; } .ds-card-content { padding: 0 1.5rem; } .ds-card-text { font-size: 0.875rem; color: oklch(0.5560 0 0); } .ds-card-footer { display: flex; align-items: center; gap: 0.5rem; padding: 0 1.5rem; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input-default",
+      "description": "Standard text field with Chalk border and Signal Blue focus ring.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Presentation title\" />",
+      "css": ".ds-input { display: flex; height: 2.25rem; width: 100%; padding: 0.5rem 0.75rem; background: transparent; color: oklch(0.1450 0 0); font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; border: 1px solid oklch(0.9220 0 0); border-radius: 0.625rem; outline: none; transition: box-shadow 150ms cubic-bezier(0.4, 0, 0.2, 1); } .ds-input::placeholder { color: oklch(0.5560 0 0); } .ds-input:focus { box-shadow: 0 0 0 3px rgba(4, 71, 255, 0.5); } .ds-input:disabled { opacity: 0.5; pointer-events: none; } .ds-input[aria-invalid='true'] { border-color: oklch(0.5770 0.2450 27.3250); box-shadow: 0 0 0 3px rgba(216, 60, 60, 0.2); }"
+    },
+    {
+      "name": "Navigation (Sidebar)",
+      "kind": "nav",
+      "refersTo": "nav-sidebar",
+      "description": "Left sidebar with active state using Obsidian background. Off-white container.",
+      "html": "<aside class=\"ds-sidebar\"><p class=\"ds-sidebar-brand\">MarkDeck</p><nav class=\"ds-sidebar-nav\"><a class=\"ds-nav-item ds-nav-item-active\" href=\"#\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><rect x=\"3\" y=\"3\" width=\"7\" height=\"7\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"7\"/><rect x=\"3\" y=\"14\" width=\"7\" height=\"7\"/><rect x=\"14\" y=\"14\" width=\"7\" height=\"7\"/></svg><span>Dashboard</span></a><a class=\"ds-nav-item\" href=\"#\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8\"/><polyline points=\"16 6 12 2 8 6\"/><line x1=\"12\" y1=\"2\" x2=\"12\" y2=\"15\"/></svg><span>Shared</span></a></nav></aside>",
+      "css": ".ds-sidebar { width: 220px; min-height: 100vh; padding: 1rem; background: oklch(0.9850 0 0); border-right: 1px solid oklch(0.9220 0 0); font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; } .ds-sidebar-brand { padding: 0.5rem 0.75rem 0.75rem; font-size: 0.875rem; font-weight: 600; letter-spacing: 0.05em; color: oklch(0.1450 0 0); } .ds-sidebar-nav { display: flex; flex-direction: column; gap: 0.25rem; } .ds-nav-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; font-size: 0.875rem; color: oklch(0.1450 0 0); border-radius: 0.375rem; text-decoration: none; transition: background 150ms cubic-bezier(0.4, 0, 0.2, 1); } .ds-nav-item:hover { background: oklch(0.9700 0 0); } .ds-nav-item-active { background: oklch(0.2050 0 0); color: oklch(1 0 0); } .ds-nav-item-active:hover { background: oklch(0.1450 0 0); }"
+    },
+    {
+      "name": "Dialog",
+      "kind": "dialog",
+      "refersTo": "dialog-default",
+      "description": "Modal overlay with 50% black backdrop. Content panel centered with fade-in animation.",
+      "html": "<div class=\"ds-dialog-overlay\"><div class=\"ds-dialog-panel\"><div class=\"ds-dialog-header\"><h2 class=\"ds-dialog-title\">Share Presentation</h2></div><div class=\"ds-dialog-body\"><p class=\"ds-dialog-description\">Invite collaborators via email.</p></div><div class=\"ds-dialog-footer\"><button class=\"ds-btn-outline\">Cancel</button><button class=\"ds-btn-primary\">Send Invite</button></div><button class=\"ds-dialog-close\" aria-label=\"Close\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M18 6 6 18\"/><path d=\"m6 6 12 12\"/></svg></button></div></div>",
+      "css": ".ds-dialog-overlay { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.5); animation: ds-fade-in 150ms cubic-bezier(0.4, 0, 0.2, 1); } .ds-dialog-panel { position: relative; width: 100%; max-width: 32rem; margin: 1rem; background: oklch(1 0 0); border: 1px solid oklch(0.9220 0 0); border-radius: 1rem; padding: 1.5rem; box-shadow: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 4px 6px -1px hsl(0 0% 0% / 0.10); animation: ds-zoom-in 200ms cubic-bezier(0.4, 0, 0.2, 1); font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; } .ds-dialog-header { margin-bottom: 1rem; } .ds-dialog-title { font-size: 1.125rem; font-weight: 600; line-height: 1; } .ds-dialog-body { margin-bottom: 1rem; } .ds-dialog-description { font-size: 0.875rem; color: oklch(0.5560 0 0); } .ds-dialog-footer { display: flex; justify-content: flex-end; gap: 0.5rem; } .ds-dialog-close { position: absolute; top: 1rem; right: 1rem; display: flex; align-items: center; justify-content: center; width: 1.5rem; height: 1.5rem; color: oklch(0.1450 0 0); opacity: 0.7; background: none; border: none; border-radius: 0.25rem; cursor: pointer; transition: opacity 150ms; } .ds-dialog-close:hover { opacity: 1; } @keyframes ds-fade-in { from { opacity: 0; } to { opacity: 1; } } @keyframes ds-zoom-in { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }"
+    },
+    {
+      "name": "Badge / Chip",
+      "kind": "chip",
+      "refersTo": "badge-outline",
+      "description": "Small metadata label with outline style. Used on presentation cards for ownership badges.",
+      "html": "<span class=\"ds-badge\">Owned</span>",
+      "css": ".ds-badge { display: inline-flex; align-items: center; padding: 0.125rem 0.5rem; font-size: 0.75rem; font-weight: 500; font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; color: oklch(0.1450 0 0); border: 1px solid oklch(0.9220 0 0); border-radius: 0.375rem; white-space: nowrap; line-height: 1.25; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Reading Room",
+    "overview": "MarkDeck is a quiet, undistracted workspace for turning notes into slides. Like a well-kept reading room in a university library, it prioritizes function over ornament. The interface recedes so the content leads.\n\nThe visual system is near-achromatic — the neutral ramp is tinted toward amber at very low chroma (oklch hue ~60°, chroma 0.003–0.015) for subconscious warmth, like warm lamplight on cream paper. Full chromatic range lives inside slide themes (26 distinct palettes applied per-presentation). The chrome around the content (sidebar, header, dashboard) carries only this subtle warm tint, never a theme color.\n\nThis system explicitly rejects the drag-and-drop design canvas aesthetic (Canva, et al.). There are no color pickers, no element selectors, no property panels. The editor is a textarea and a live preview.",
+    "keyCharacteristics": [
+      "Near-achromatic chrome with warm-tinted neutral ramp, chromatic slide canvases",
+      "1rem (16px) radius on cards and dialogs — gently rounded, not pill-like",
+      "Flat surfaces with tonal layering for depth; shadows reserved for interactive hover states and dialog overlays",
+      "Serif display font for slide titles, sans body for UI — content is editorial, chrome is utilitarian"
+    ],
+    "rules": [
+      { "name": "The Chromatic Firewall Rule", "body": "The app chrome (sidebar, header, dashboard, editor shell) uses only the neutral ramp. All color lives inside slide themes, applied per-presentation via data-theme. No UI element outside the slide canvas may carry a theme color.", "section": "colors" },
+      { "name": "The Flat-By-Default Rule", "body": "Surfaces are flat at rest. Shadows appear only as a response to state — button hover, dialog open, card hover. If an element doesn't change state, it doesn't cast a shadow.", "section": "elevation" },
+      { "name": "The Warm Neutral Rule", "body": "All neutral-ramp colors are tinted toward amber (oklch hue ~60°) at very low chroma (0.003–0.015). This provides subconscious warmth without reading as 'colored.' Avoid pure gray neutrals (0 chroma) in the UI shell — they feel sterile against the warm tint.", "section": "colors" }
+    ],
+    "dos": [
+      "Do use the warm-tinted neutral ramp for all app chrome. Color belongs on slide canvases, not in the UI shell.",
+      "Do use Obsidian (near-black) as the sole primary button and active nav color. No accent hues in the toolbar.",
+      "Do keep one call-to-action per viewport. Secondary actions use outline or ghost variants.",
+      "Do rely on tonal layering (White → Off-white → Powder) for depth. Shadows are for interaction feedback only.",
+      "Do use Waldenburg for slide titles and Inter for everything else. The serif/sans split is the system's defining personality axis.",
+      "Do keep buttons to one of the six defined sizes. Custom sizing breaks the rhythm."
+    ],
+    "donts": [
+      "Don't use color from a slide theme anywhere in the app chrome. Not in the sidebar, header, buttons, or navigation.",
+      "Don't make MarkDeck feel like Canva — no drag-and-drop canvas, no element selection, no property panels, no visual editor.",
+      "Don't use border-left greater than 1px as a colored accent stripe. Use full borders, background tints, or nothing.",
+      "Don't apply glassmorphism, gradient text, or side-stripe borders anywhere in the system.",
+      "Don't use numbered section markers (01 / 02 / 03) as default scaffolding.",
+      "Don't use tiny uppercase tracked eyebrow text ('ABOUT', 'PROCESS') above every section heading.",
+      "Don't render identical card grids with same-sized icon + heading + text repeated endlessly.",
+      "Don't let text overflow its container. Test heading copy at every breakpoint.",
+      "Don't animate with bounce or elastic easing. Use ease-out-quart / quint / expo curves.",
+      "Don't ship motion without a prefers-reduced-motion: reduce fallback."
+    ]
+  }
+}
