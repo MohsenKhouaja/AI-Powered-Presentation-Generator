@@ -1,35 +1,16 @@
 import { Router } from "express";
-import type { Request } from "express";
 import type { UUID } from "node:crypto";
-import jsonwebtoken from "jsonwebtoken";
 import { presentationsService } from "./presentations-service.js";
 export const presentationsRouter = Router();
 import { db } from "../../database/index.js";
 
-function getAuthenticatedUserId(req: Request): UUID {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    throw new Error("Unauthorized, token missing");
-  }
-  const token = authHeader.split(" ")[1];
-  const payload = jsonwebtoken.verify(
-    token,
-    process.env.JWT_ACCESS_TOKEN_SECRET_KEY as string,
-  ) as { sub?: string };
-
-  if (!payload.sub) {
-    throw new Error("Unauthorized, invalid token payload");
-  }
-
-  return payload.sub as UUID;
-}
 presentationsRouter.get("/presentations", async (req, res) => {
-  const userId = getAuthenticatedUserId(req);
+  const userId = req.authenticatedUserId as UUID;
   res.json(await presentationsService.findMany(db, userId));
 });
 
 presentationsRouter.get("/presentation/:id", async (req, res) => {
-  const userId = getAuthenticatedUserId(req);
+  const userId = req.authenticatedUserId as UUID;
   const presentationId = req.params.id;
   res.json(
     await presentationsService.findOneDetailed(
@@ -41,7 +22,7 @@ presentationsRouter.get("/presentation/:id", async (req, res) => {
 });
 
 presentationsRouter.post("/presentation", async (req, res) => {
-  const userId = getAuthenticatedUserId(req);
+  const userId = req.authenticatedUserId as UUID;
   const title = req.body?.title ?? "";
   const createdPresentation = await presentationsService.create(db, {
     title: title,
@@ -51,7 +32,7 @@ presentationsRouter.post("/presentation", async (req, res) => {
 });
 
 presentationsRouter.put("/presentation/:id", async (req, res) => {
-  const userId = getAuthenticatedUserId(req);
+  const userId = req.authenticatedUserId as UUID;
   const presentationId = req.params.id;
 
   const title =
@@ -72,7 +53,7 @@ presentationsRouter.put("/presentation/:id", async (req, res) => {
 });
 
 presentationsRouter.delete("/presentation/:id", async (req, res) => {
-  const userId = getAuthenticatedUserId(req);
+  const userId = req.authenticatedUserId as UUID;
   const presentationId = req.params.id;
   res.json(
     await presentationsService.remove(db, userId, presentationId as UUID),
