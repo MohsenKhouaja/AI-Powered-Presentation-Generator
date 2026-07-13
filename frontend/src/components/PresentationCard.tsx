@@ -53,7 +53,7 @@ export function PresentationCard({
       className={`rounded-xl bg-card shadow-sm ${className ?? ""}`}
     >
       <CardHeader>
-        <CardTitle className="line-clamp-2 text-base">{title}</CardTitle>
+        <CardTitle className="line-clamp-2 text-2xl leading-tight">{title}</CardTitle>
       </CardHeader>
       <CardContent>
         <p className="text-sm text-muted-foreground">
