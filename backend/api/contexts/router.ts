@@ -51,7 +51,7 @@ contextsRouter.post(
     const prompt = req.body?.prompt ?? null;
     const presentationId = req.body?.presentationId ?? null;
     if (!prompt || !presentationId) {
-      throw new Error("prompt and presentationId are required");
+      throw new Error("E003: prompt and presentationId are required");
     }
     const newFiles = serializeFilesForInsert(
       req.files as Express.Multer.File[],

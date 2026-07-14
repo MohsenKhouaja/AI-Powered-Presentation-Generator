@@ -27,7 +27,7 @@ const findOne = async (
     },
   });
   if (!context) {
-    throw new Error("context doesn't exist");
+    throw new Error("E001: context doesn't exist");
   }
   const files = await Promise.all(
     context.files.map(async (file) => {
@@ -56,7 +56,7 @@ const create = async (
   const contextId = randomUUID() as string;
   return await db.transaction(async (tx) => {
     if (context.prompt === undefined) {
-      throw new Error("Prompt is required");
+      throw new Error("E002: Prompt is required");
     }
     await tx.insert(contexts).values({
       id: contextId,
@@ -88,6 +88,12 @@ const update = async (
   newFiles: uploadedFile[],
   deletedFilesNames: string[],
 ) => {
+  const doesContextExist = await db.query.contexts.findFirst({
+    where: { id: contextUpdate.id },
+  });
+  if (!doesContextExist) {
+    throw new Error("E00-1: context doesn't exist");
+  }
   return await db.transaction(async (tx) => {
     await tx
       .update(contexts)

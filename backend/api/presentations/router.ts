@@ -42,20 +42,18 @@ presentationsRouter.put("/presentation/:id", async (req, res) => {
     res.status(400).json({ error: "Title is required" });
     return;
   }
-  const updatedPresentation = await presentationsService.updateTitle(
+  await presentationsService.updateTitle(
     db,
     userId,
     presentationId as UUID,
     title,
   );
-
-  res.json(updatedPresentation);
+  res.status(200).end();
 });
 
 presentationsRouter.delete("/presentation/:id", async (req, res) => {
   const userId = req.authenticatedUserId as UUID;
   const presentationId = req.params.id;
-  res.json(
-    await presentationsService.remove(db, userId, presentationId as UUID),
-  );
+  await presentationsService.remove(db, userId, presentationId as UUID);
+  res.status(204).end();
 });

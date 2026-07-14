@@ -23,7 +23,7 @@ export function useInvitePresentationAccessMutation(
   return useMutation({
     mutationFn: async ({ email, expiresAt }: InviteAccessInput) => {
       if (!presentationId) {
-        throw new Error("Missing presentation id");
+        throw new Error("E054: Missing presentation id");
       }
 
       return api.post<PresentationAccessEntry>(

@@ -19,7 +19,7 @@ const authContext = createContext<AuthContextValue | null>(null);
 export function useAuth(): AuthContextValue {
   const context = useContext(authContext);
   if (!context) {
-    throw new Error("useAuth must be used within AuthProvider");
+    throw new Error("E049: useAuth must be used within AuthProvider");
   }
   return context;
 }

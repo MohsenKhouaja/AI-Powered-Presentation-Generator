@@ -49,7 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(false);
       try {
         if (!parsedToken) {
-          throw Error("token is missing");
+          throw Error("E050: token is missing");
         }
         const decodedJWT = jwtDecode<JwtPayload>(parsedToken);
         setToken(parsedToken);
@@ -76,7 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       body: JSON.stringify({ email: email, password: password }),
     });
     if (!nextToken) {
-      throw new Error("Unable to sign in");
+      throw new Error("E051: Unable to sign in");
     }
   };
   const register = async (email: string, password: string) => {
@@ -89,7 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       body: JSON.stringify({ email: email, password: password }),
     });
     if (!nextToken) {
-      throw new Error("Unable to create account");
+      throw new Error("E052: Unable to create account");
     }
   };
   const refresh = async () => {

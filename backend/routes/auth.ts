@@ -40,7 +40,7 @@ async function createAuthTokens(req, res, success, userId) {
       exp: Math.floor(Date.now() / 1000) + refreshTokenExpirationSeconds,
     };
     if (!JWT_ACCESS_TOKEN_SECRET_KEY || !JWT_REFRESH_TOKEN_SECRET_KEY) {
-      throw new Error("JWT_ACCESS_TOKEN_SECRET_KEY is not set");
+      throw new Error("E043: JWT_ACCESS_TOKEN_SECRET_KEY is not set");
     }
     const accessToken = jsonwebtoken.sign(
       accessTokenPayload,

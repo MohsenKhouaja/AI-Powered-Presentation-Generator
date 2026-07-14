@@ -103,7 +103,7 @@ const findOneDetailed = async (
   });
 
   if (!presentationRow || !presentationRow.contexts) {
-    throw new Error("presentation doesn't exist");
+    throw new Error("E004: presentation doesn't exist");
   }
 
   const isOwner = presentationRow.userId === userID;
@@ -114,7 +114,7 @@ const findOneDetailed = async (
   } else {
     const canEdit = await hasActiveEditAccess(db, presentationId, userID);
     if (!canEdit) {
-      throw new Error("user unauthorized to access this presentation");
+      throw new Error("E005: user unauthorized to access this presentation");
     }
     accessType = "edit";
   }
@@ -160,11 +160,21 @@ const create = async (
 ): Promise<PresentationRow> => {
   const presentationId = randomUUID();
   const createdAt = new Date();
-  await db.insert(presentations).values({
-    id: presentationId,
-    title: presentation.title,
-    userId: presentation.userId,
-    createdAt,
+  await db.transaction(async (tx) => {
+    await tx.insert(presentations).values({
+      id: presentationId,
+      title: presentation.title,
+      userId: presentation.userId,
+      createdAt,
+    });
+    await contextService.create(
+      tx,
+      {
+        prompt: "",
+        presentationId,
+      },
+      [],
+    );
   });
   return {
     id: presentationId,
@@ -180,10 +190,10 @@ const remove = async (db: DBContext, userId: UUID, presentationId: UUID) => {
     columns: { userId: true },
   });
   if (!presentationRow) {
-    throw new Error("presentation doesn't exist");
+    throw new Error("E006: presentation doesn't exist");
   }
   if (presentationRow.userId !== userId) {
-    throw new Error("user not authorized to delete this presentation");
+    throw new Error("E007: user not authorized to delete this presentation");
   }
   await db.transaction(async (tx) => {
     await slidesService.removeAllByPresentation(tx, userId, presentationId);
@@ -202,12 +212,12 @@ const updateTitle = async (
     columns: { userId: true },
   });
   if (!presentationRow) {
-    throw new Error("presentation doesn't exist");
+    throw new Error("E008: presentation doesn't exist");
   }
 
   const isOwner = presentationRow.userId === userId;
   if (!isOwner) {
-    throw new Error("user unauthorized to edit this title");
+    throw new Error("E009: user unauthorized to edit this title");
   }
   await db
     .update(presentations)

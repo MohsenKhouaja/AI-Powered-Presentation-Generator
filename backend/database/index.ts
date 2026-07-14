@@ -26,7 +26,7 @@ export type DBContext = typeof db | TransactionContext;
 console.log("MySQL Database initialized");
 
 if (!process.env.MONGO_URI) {
-  throw new Error("MONGO_URI environment variable is not set");
+  throw new Error("E042: MONGO_URI environment variable is not set");
 }
 
 const mongoClient = new MongoClient(process.env.MONGO_URI);

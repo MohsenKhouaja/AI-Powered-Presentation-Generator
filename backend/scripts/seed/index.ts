@@ -9,6 +9,7 @@ import type { Collection } from "mongodb";
 import { db, mongoDB } from "../../database/index.js";
 import {
   contexts,
+  editAccess,
   files as filesTable,
   presentations,
   slides,
@@ -16,7 +17,7 @@ import {
 } from "../../database/drizzle/schema.js";
 import { UPLOAD_PATH } from "../../config/uploads.js";
 
-import { SEED_PRESENTATIONS, SEED_USERS } from "./dataset.js";
+import { SEED_EDIT_ACCESS, SEED_PRESENTATIONS, SEED_USERS } from "./dataset.js";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -171,6 +172,36 @@ export const runSeed = async (): Promise<SeedResult> => {
     if (mongoDocuments.length > 0) {
       await slidesContentCollection.insertMany(mongoDocuments);
     }
+  }
+
+  // ── 3. Insert edit access (shared presentations) ─────────────────────────
+
+  for (const seedAccess of SEED_EDIT_ACCESS) {
+    const presEntry = seededPresentations.find(
+      (p) => p.key === seedAccess.presentationKey,
+    );
+
+    if (!presEntry) {
+      throw new Error(
+        `Seed dataset error: presentation key "${seedAccess.presentationKey}" not found for editAccess.`,
+      );
+    }
+
+    const targetUser = seededUsers.find(
+      (u) => u.email === seedAccess.email,
+    );
+
+    if (!targetUser) {
+      throw new Error(
+        `Seed dataset error: user email "${seedAccess.email}" not found for editAccess.`,
+      );
+    }
+
+    await db.insert(editAccess).values({
+      id: randomUUID() as UUID,
+      userId: targetUser.id,
+      presentationId: presEntry.id,
+    });
   }
 
   return { seededUsers, seededPresentations };

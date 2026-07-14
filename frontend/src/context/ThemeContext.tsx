@@ -12,7 +12,7 @@ const themeContext = createContext<ThemeContextType | null>(null);
 export function useTheme() {
   const theme: ThemeContextType | null = useContext(themeContext);
   if (!theme) {
-    throw new Error("use theme must be used within theme provvider");
+    throw new Error("E053: use theme must be used within theme provvider");
   }
   return theme;
 }

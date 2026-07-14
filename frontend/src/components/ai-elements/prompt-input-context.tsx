@@ -61,7 +61,7 @@ export const captureScreenshot = async (): Promise<File | null> => {
 
     await new Promise<void>((resolve, reject) => {
       video.onloadedmetadata = () => resolve();
-      video.onerror = () => reject(new Error("Failed to load screen stream"));
+      video.onerror = () => reject(new Error("E044: Failed to load screen stream"));
     });
 
     await video.play();

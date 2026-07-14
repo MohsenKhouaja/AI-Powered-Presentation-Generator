@@ -55,7 +55,7 @@ export function useCreateSlideMutation(presentationId: string | null) {
   return useMutation({
     mutationFn: async ({ content, slideOrder }: CreateSlideInput) => {
       if (!presentationId) {
-        throw new Error("Missing presentation id");
+        throw new Error("E055: Missing presentation id");
       }
 
       return api.post<SlideRecord>(
@@ -90,7 +90,7 @@ export function useUpdateSlideContentMutation(presentationId: string | null) {
   return useMutation({
     mutationFn: async ({ slideId, content }: UpdateSlideContentInput) => {
       if (!presentationId) {
-        throw new Error("Missing presentation id");
+        throw new Error("E056: Missing presentation id");
       }
 
       return api.put<SlideRecord>(
@@ -124,7 +124,7 @@ export function useDeleteSlideMutation(presentationId: string | null) {
   return useMutation({
     mutationFn: async (slideId: string) => {
       if (!presentationId) {
-        throw new Error("Missing presentation id");
+        throw new Error("E057: Missing presentation id");
       }
 
       return api.del<{ id: string; deleted: true }>(
@@ -151,7 +151,7 @@ export function useReorderSlidesMutation(presentationId: string | null) {
   return useMutation({
     mutationFn: async ({ first, second }: ReorderSlidesInput) => {
       if (!presentationId) {
-        throw new Error("Missing presentation id");
+        throw new Error("E058: Missing presentation id");
       }
 
       return api.put<{ updated: SlideOrderUpdate[] }>(
@@ -200,7 +200,7 @@ export function useGenerateSlidesFromContextMutation(
   return useMutation({
     mutationFn: async ({ contextId, numSlides }: GenerateSlidesInput) => {
       if (!presentationId) {
-        throw new Error("Missing presentation id");
+        throw new Error("E059: Missing presentation id");
       }
 
       return api.post<SlideRecord[]>(

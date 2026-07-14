@@ -37,35 +37,35 @@ type ContextFileForPrompt = {
 const slidesContentCollection: Collection<SlideContentDocument> =
   mongoDB.collection<SlideContentDocument>("slides_content");
 
-const GROQ_CHAT_COMPLETIONS_URL =
-  "https://api.groq.com/openai/v1/chat/completions";
+const OPENROUTER_CHAT_COMPLETIONS_URL =
+  "https://openrouter.ai/api/v1/chat/completions";
 
 const extractJsonObject = (text: string): string => {
   const start = text.indexOf("{");
   const end = text.lastIndexOf("}");
   if (start === -1 || end === -1 || end <= start) {
-    throw new Error("LLM response did not contain JSON object");
+    throw new Error("E019: LLM response did not contain JSON object");
   }
   return text.slice(start, end + 1);
 };
 
-const generateSlidesWithGroq = async (input: {
+const generateSlidesWithOpenRouter = async (input: {
   title: string;
   contextPrompt: string;
   files: ContextFileForPrompt[];
   numSlides?: number;
 }): Promise<GeneratedSlide[]> => {
-  const apiKey = process.env.GROQ_API_KEY || process.env.GROQ;
+  const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
-    throw new Error("Groq API key is not set (expected GROQ or GROQ_API_KEY)");
+    throw new Error("E020: OpenRouter API key is not set (expected OPENROUTER_API_KEY)");
   }
 
-  const model = process.env.GROQ_MODEL || "llama-3.1-70b-versatile";
+  const model = process.env.OPENROUTER_MODEL || "tencent/hy3:free";
 
   const system = "You generate slide decks. Output must be valid JSON only.";
 
   const maxBase64Chars = Number(
-    process.env.GROQ_MAX_FILE_BASE64_CHARS || 50_000,
+    process.env.OPENROUTER_MAX_FILE_BASE64_CHARS || 50_000,
   );
 
   const filesForPrompt = (input.files ?? []).map((file, index) => {
@@ -114,7 +114,7 @@ ${slideCountRule}
 - Use concise bullets; no giant paragraphs.
 `;
 
-  const response = await fetch(GROQ_CHAT_COMPLETIONS_URL, {
+  const response = await fetch(OPENROUTER_CHAT_COMPLETIONS_URL, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -133,7 +133,7 @@ ${slideCountRule}
   if (!response.ok) {
     const bodyText = await response.text().catch(() => "");
     throw new Error(
-      `Groq request failed (${response.status}): ${bodyText || response.statusText}`,
+      `OpenRouter request failed (${response.status}): ${bodyText || response.statusText}`,
     );
   }
 
@@ -143,7 +143,7 @@ ${slideCountRule}
 
   const content = data.choices?.[0]?.message?.content ?? "";
   if (!content.trim()) {
-    throw new Error("Groq response was empty");
+    throw new Error("E021: OpenRouter response was empty");
   }
 
   const jsonText = extractJsonObject(content);
@@ -161,7 +161,7 @@ ${slideCountRule}
   }
 
   if (normalized.length === 0) {
-    throw new Error("Groq did not return any slides");
+    throw new Error("E022: OpenRouter did not return any slides");
   }
 
   return normalized;
@@ -195,7 +195,7 @@ const assertCanEditPresentation = async (
   });
 
   if (!presentationRow) {
-    throw new Error("presentation doesn't exist");
+    throw new Error("E023: presentation doesn't exist");
   }
 
   if (presentationRow.userId === userId) {
@@ -204,14 +204,14 @@ const assertCanEditPresentation = async (
 
   const canEdit = await hasActiveEditAccess(db, presentationId, userId);
   if (!canEdit) {
-    throw new Error("user unauthorized to edit this presentation");
+    throw new Error("E024: user unauthorized to edit this presentation");
   }
 };
 
 const getMongoContentBySlideId = async (slideId: UUID): Promise<string> => {
   const contentDoc = await slidesContentCollection.findOne({ _id: slideId });
   if (!contentDoc) {
-    throw new Error("slide content not found");
+    throw new Error("E025: slide content not found");
   }
   return contentDoc.slide_content;
 };
@@ -254,7 +254,7 @@ const findOne = async (
   });
 
   if (!slideRow) {
-    throw new Error("slide doesn't exist");
+    throw new Error("E026: slide doesn't exist");
   }
 
   const mongoContent = await getMongoContentBySlideId(slideId);
@@ -322,7 +322,7 @@ const update = async (
   });
 
   if (!slideRow) {
-    throw new Error("slide doesn't exist");
+    throw new Error("E027: slide doesn't exist");
   }
 
   await slidesContentCollection.updateOne(
@@ -352,7 +352,7 @@ const removeOne = async (
   });
 
   if (!slideRow) {
-    throw new Error("slide doesn't exist");
+    throw new Error("E028: slide doesn't exist");
   }
 
   await db.transaction(async (tx) => {
@@ -381,7 +381,7 @@ const updateOrder = async (
 ): Promise<slideOrder[]> => {
   await assertCanEditPresentation(db, presentationId, userId);
   if (firstSlideOrder.length !== secondSlideOrder.length) {
-    throw new Error("slide orders length mismatch");
+    throw new Error("E029: slide orders length mismatch");
   }
   await db.transaction(async (tx) => {
     for (let i = 0; i < firstSlideOrder.length; i++) {
@@ -413,26 +413,26 @@ const generateFromContext = async (
   });
 
   if (!presentationRow) {
-    throw new Error("presentation doesn't exist");
+    throw new Error("E030: presentation doesn't exist");
   }
 
   const contextRow = await contextService.findOne(db, contextId);
   if (!contextRow) {
-    throw new Error("context doesn't exist");
+    throw new Error("E031: context doesn't exist");
   }
 
   if (contextRow.presentationId !== presentationId) {
-    throw new Error("context does not belong to this presentation");
+    throw new Error("E032: context does not belong to this presentation");
   }
 
   const contextPrompt = contextRow.prompt ?? "";
   const contextFiles = Array.isArray(contextRow.files) ? contextRow.files : [];
 
   if (!contextPrompt.trim() && contextFiles.length === 0) {
-    throw new Error("presentation context is empty");
+    throw new Error("E033: presentation context is empty");
   }
 
-  const generated = await generateSlidesWithGroq({
+  const generated = await generateSlidesWithOpenRouter({
     title: presentationRow.title,
     contextPrompt,
     files: contextFiles,
@@ -487,7 +487,7 @@ const removeAllByPresentation = async (
   });
 
   if (!slideRows) {
-    throw new Error("slide doesn't exist");
+    throw new Error("E034: slide doesn't exist");
   }
 
   if (slideRows.length > 0) {

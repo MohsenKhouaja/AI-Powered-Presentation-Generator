@@ -28,7 +28,7 @@ const grantAccess = async (
     columns: { id: true },
   });
   if (!userRow) {
-    throw new Error("user doesn't exist");
+    throw new Error("E010: user doesn't exist");
   }
   const userIdFromEmail = userRow.id;
 
@@ -38,11 +38,11 @@ const grantAccess = async (
     columns: { userId: true },
   });
   if (!presentationRow) {
-    throw new Error("presentation doesn't exist");
+    throw new Error("E011: presentation doesn't exist");
   }
   const userOwnsPresentation: boolean = presentationRow.userId === userId;
   if (!userOwnsPresentation) {
-    throw new Error("user unauthorized to grant access");
+    throw new Error("E012: user unauthorized to grant access");
   }
   const existingAccessRow = await db.query.editAccess.findFirst({
     where: {
@@ -89,7 +89,7 @@ const grantAccess = async (
   });
 
   if (!presentationRow) {
-    throw new Error("presentation doesn't exist");
+    throw new Error("E013: presentation doesn't exist");
   }
 
   const isOwner = presentationRow.userId === requesterId;
@@ -107,7 +107,7 @@ const grantAccess = async (
     });
 
     if (!activeEditAccess) {
-      throw new Error("user unauthorized to access this presentation");
+      throw new Error("E014: user unauthorized to access this presentation");
     }
   }
 
@@ -148,11 +148,11 @@ const removeAccess = async (
   });
 
   if (!row) {
-    throw new Error("access entry doesn't exist");
+    throw new Error("E015: access entry doesn't exist");
   }
 
   if (row.presentation?.userId !== requesterId) {
-    throw new Error("user unauthorized to remove access");
+    throw new Error("E016: user unauthorized to remove access");
   }
 
   await db.delete(editAccess).where(eq(editAccess.id, accessId));
@@ -171,12 +171,12 @@ const createShareLink = async (
   });
 
   if (!presentationRow) {
-    throw new Error("presentation doesn't exist");
+    throw new Error("E017: presentation doesn't exist");
   }
 
   const userOwnsPresentation = presentationRow.userId === requesterId;
   if (!userOwnsPresentation) {
-    throw new Error("user unauthorized to generate share link");
+    throw new Error("E018: user unauthorized to generate share link");
   }
 
   const fallbackOrigin = process.env.ALLOWED_ORIGINS?.split(",").find(Boolean);

@@ -26,9 +26,12 @@ export function EditorHeader({
     <header className="rounded-lg border p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => history.back()}>
+            <ArrowLeftIcon className="mr-1 size-4" /> Back
+          </Button>
           <Button asChild variant="outline" size="sm">
             <Link to={`/presentations/${presentationId}`}>
-              <ArrowLeftIcon className="mr-1 size-4" /> Back
+              <EyeIcon className="mr-1 size-4" /> View
             </Link>
           </Button>
           <Input

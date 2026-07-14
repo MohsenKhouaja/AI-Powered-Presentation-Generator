@@ -163,7 +163,6 @@ export function DashboardPage() {
                     actions={[
                       { type: "link", label: "View", to: `/presentations/${presentation.id}`, variant: "outline" },
                       { type: "link", label: "Edit", to: `/presentations/${presentation.id}/edit`, variant: "outline" },
-                      { type: "button", label: "Delete", onClick: () => deleteMutation.mutate(presentation.id), variant: "destructive", disabled: true },
                     ]}
                   />
                 ))}

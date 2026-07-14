@@ -84,12 +84,6 @@ export const SEED_PRESENTATIONS: SeedPresentation[] = [
       "A beginner-friendly overview of artificial intelligence concepts.",
     files: [
       {
-        originalName: "ai-brain.png",
-        mimeType: "image/png",
-        base64Content:
-          "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
-      },
-      {
         originalName: "notes.txt",
         mimeType: "text/plain",
         base64Content:
@@ -112,6 +106,50 @@ export const SEED_PRESENTATIONS: SeedPresentation[] = [
       {
         order: 4,
         markdown: `# Real-World Applications\n\n- 🏥 Medical diagnosis and drug discovery\n- 🚗 Self-driving vehicles\n- 💬 Conversational assistants\n- 🎨 Generative art and music\n- 📈 Financial forecasting`,
+      },
+    ],
+  },
+  {
+    key: "cloud-architecture",
+    title: `${SEED_PRESENTATION_TITLE_PREFIX} Cloud Architecture Patterns`,
+    ownerIndex: 0,
+    contextPrompt: "Common design patterns for building scalable cloud systems.",
+    slides: [
+      {
+        order: 1,
+        markdown: `# Monolith to Microservices\n\nStart with a **monolith**, split when you have a clear boundary.\n\n- Extract bounded contexts into services\n- Use **API Gateway** for routing\n- Each service owns its data`,
+      },
+      {
+        order: 2,
+        markdown: `# Event-Driven Architecture\n\nProducers emit events, consumers react asynchronously.\n\n- **Message brokers**: Kafka, RabbitMQ, SQS\n- **Benefits**: decoupling, resilience, replayability\n- **Challenge**: eventual consistency`,
+      },
+      {
+        order: 3,
+        markdown: `# Serverless at Scale\n\n| Service | Use Case |\n|---------|----------|\n| Lambda / Cloud Functions | Short-lived compute |\n| Step Functions | Orchestrate workflows |\n| DynamoDB | NoSQL key-value store |\n| S3 | Object storage |`,
+      },
+    ],
+  },
+  {
+    key: "graphql-deep-dive",
+    title: `${SEED_PRESENTATION_TITLE_PREFIX} GraphQL Deep Dive`,
+    ownerIndex: 0,
+    contextPrompt: "Exploring advanced GraphQL concepts for production APIs.",
+    slides: [
+      {
+        order: 1,
+        markdown: `# Why GraphQL?\n\nAsk for **exactly** what you need, nothing more.\n\n- Single endpoint vs many REST routes\n- Strongly typed schema as a contract\n- Client-driven data fetching`,
+      },
+      {
+        order: 2,
+        markdown: `# Resolvers & DataLoaders\n\nEach field maps to a resolver function.\n\n**N+1 Problem**: Loading a list of posts triggers one query per author.\n\n**Solution**: Batch with a **DataLoader** — collect IDs per tick, fetch in one query.`,
+      },
+      {
+        order: 3,
+        markdown: `# Subscriptions\n\nReal-time updates over **WebSockets**.\n\n\`\`\`graphql\nsubscription {\n  newMessage(chatId: "42") {\n    id\n    text\n    sender { name }\n  }\n}\n\`\`\``,
+      },
+      {
+        order: 4,
+        markdown: `# Security Best Practices\n\n- **Depth limiting** to prevent deeply nested queries\n- **Query complexity analysis** to cap expensive fields\n- **Rate limiting** per user or API key\n- **Field-level authorization** in resolvers`,
       },
     ],
   },
@@ -145,6 +183,26 @@ export const SEED_PRESENTATIONS: SeedPresentation[] = [
     ],
   },
   {
+    key: "css-grid-layouts",
+    title: `${SEED_PRESENTATION_TITLE_PREFIX} CSS Grid Masterclass`,
+    ownerIndex: 1,
+    contextPrompt: "Mastering CSS Grid for complex responsive layouts.",
+    slides: [
+      {
+        order: 1,
+        markdown: `# Grid vs Flexbox\n\n**Flexbox** = 1D (row OR column)\n**Grid** = 2D (rows AND columns)\n\nUse Grid for page-level layouts. Use Flexbox for component-level alignment.`,
+      },
+      {
+        order: 2,
+        markdown: `# Defining a Grid\n\n\`\`\`css\n.container {\n  display: grid;\n  grid-template-columns: repeat(3, 1fr);\n  grid-template-rows: auto;\n  gap: 1.5rem;\n}\n\`\`\`\n\nThe \`fr\` unit distributes available space proportionally.`,
+      },
+      {
+        order: 3,
+        markdown: `# Named Areas\n\n\`\`\`css\ngrid-template-areas:\n  "header header header"\n  "sidebar main   aside"\n  "footer footer footer";\n\`\`\`\n\nVisual and maintainable — perfect for dashboards.`,
+      },
+    ],
+  },
+  {
     key: "product-design",
     title: `${SEED_PRESENTATION_TITLE_PREFIX} Product Design Principles`,
     ownerIndex: 2,
@@ -167,5 +225,45 @@ export const SEED_PRESENTATIONS: SeedPresentation[] = [
         markdown: `# Accessibility Is Not Optional\n\n- Target **WCAG 2.1 AA** as a minimum\n- Colour contrast ratio ≥ 4.5 : 1 for body text\n- All interactive elements must be keyboard-reachable\n- Provide meaningful \`alt\` text for images\n- Test with a screen reader (VoiceOver, NVDA)`,
       },
     ],
+  },
+  {
+    key: "data-visualization",
+    title: `${SEED_PRESENTATION_TITLE_PREFIX} Data Visualization Strategies`,
+    ownerIndex: 2,
+    contextPrompt: "Choosing the right chart type and telling stories with data.",
+    slides: [
+      {
+        order: 1,
+        markdown: `# Choosing the Right Chart\n\n| Data Relationship | Chart Type |\n|-------------------|------------|\n| Part-to-whole | Pie / Donut |\n| Trend over time | Line |\n| Comparison | Bar |\n| Distribution | Histogram / Box |\n| Correlation | Scatter |`,
+      },
+      {
+        order: 2,
+        markdown: `# The Data-Ink Ratio\n\n> Edward Tufte: "Maximise the data-ink ratio."\n\nRemove:\n- Chart borders\n- Unnecessary gridlines\n- Decorative elements\n\nKeep:\n- Data points\n- Clear labels\n- Direct annotations`,
+      },
+      {
+        order: 3,
+        markdown: `# Tools of the Trade\n\n- **D3.js** – full control, steep learning curve\n- **Chart.js** – simple charts in minutes\n- **Recharts** – React declarative charts\n- **Observable Plot** – grammar of graphics\n- **Kepler.gl** – geospatial data`,
+      },
+    ],
+  },
+];
+
+// ─── Edit Access (Shared Presentations) ───────────────────────────────────────
+
+export type SeedEditAccess = {
+  /** Presentation key from SEED_PRESENTATIONS. */
+  presentationKey: string;
+  /** Email of the user being granted access. */
+  email: string;
+};
+
+export const SEED_EDIT_ACCESS: SeedEditAccess[] = [
+  {
+    presentationKey: "web-performance",
+    email: "mohsen.khouaja@supcom.tn",
+  },
+  {
+    presentationKey: "product-design",
+    email: "mohsen.khouaja@supcom.tn",
   },
 ];

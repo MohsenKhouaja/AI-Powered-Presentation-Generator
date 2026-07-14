@@ -8,7 +8,7 @@ const scrypt = promisify(crypto.scrypt);
 
 const hashPassword = async (password: string): Promise<string> => {
   if (!password || typeof password !== "string") {
-    throw new Error("Password is required");
+    throw new Error("E035: Password is required");
   }
 
   const salt = crypto.randomBytes(16).toString("hex");
@@ -53,7 +53,7 @@ const signup = async (db: DBContext, user: NewUserRow): Promise<UserRow> => {
   });
 
   if (existingRow) {
-    throw new Error("User with this email or username already exists");
+    throw new Error("E036: User with this email or username already exists");
   }
 
   const userId = crypto.randomUUID() as string;
@@ -78,11 +78,11 @@ const login = async (
   password: string,
 ): Promise<UserRow> => {
   if (!email || typeof email !== "string") {
-    throw new Error("Email is required");
+    throw new Error("E037: Email is required");
   }
 
   if (!password || typeof password !== "string") {
-    throw new Error("Password is required");
+    throw new Error("E038: Password is required");
   }
 
   const row = await db.query.users.findFirst({
@@ -96,12 +96,12 @@ const login = async (
   });
 
   if (!row) {
-    throw new Error("Invalid email or password");
+    throw new Error("E039: Invalid email or password");
   }
 
   const isPasswordValid = await verifyPassword(password, row.password);
   if (!isPasswordValid) {
-    throw new Error("Invalid email or password");
+    throw new Error("E040: Invalid email or password");
   }
 
   return {
