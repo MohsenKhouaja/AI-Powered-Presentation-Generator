@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { hostname } from "node:os";
-import { fileURLToPath } from "node:url";
+import path from "node:path";
 import type { Request, Response } from "express";
 import dotenv from "dotenv";
 import pino from "pino";
@@ -30,7 +30,7 @@ const consoleStream = prettyLogs
   : pino.destination(1);
 
 const errorStream = pino.destination({
-  dest: fileURLToPath(new URL("../error.log", import.meta.url)),
+  dest: path.resolve(process.cwd(), "error.log"),
   mkdir: true,
 });
 
