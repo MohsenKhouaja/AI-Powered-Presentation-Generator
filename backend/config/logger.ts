@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { hostname } from "node:os";
+import { fileURLToPath } from "node:url";
 import type { Request, Response } from "express";
 import dotenv from "dotenv";
 import pino from "pino";
@@ -17,7 +18,7 @@ const REDACTED = "[Redacted]";
 const sensitiveQueryParameter =
   /^(?:access_?token|api_?key|authorization|code|password|pwd|refresh_?token|secret|token)$/i;
 
-const transport = prettyLogs
+const consoleStream = prettyLogs
   ? pino.transport({
       target: "pino-pretty",
       options: {
@@ -26,7 +27,17 @@ const transport = prettyLogs
         translateTime: "SYS:standard",
       },
     })
-  : undefined;
+  : pino.destination(1);
+
+const errorStream = pino.destination({
+  dest: fileURLToPath(new URL("../error.log", import.meta.url)),
+  mkdir: true,
+});
+
+const logStreams = pino.multistream([
+  { level: "trace", stream: consoleStream },
+  { level: "error", stream: errorStream },
+]);
 
 export const logger = pino(
   {
@@ -61,7 +72,7 @@ export const logger = pino(
       censor: REDACTED,
     },
   },
-  transport,
+  logStreams,
 );
 
 function sanitizeUrl(rawUrl: string): string {

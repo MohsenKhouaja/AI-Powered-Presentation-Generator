@@ -10,7 +10,8 @@ generates a UUID. The selected request ID is always returned in the response's
 
 Authorization headers, cookies, auth tokens, passwords, and sensitive URL query
 parameters are redacted. Development logs are pretty-printed, while production
-logs are newline-delimited JSON.
+logs are newline-delimited JSON. Error and fatal logs are also written as
+newline-delimited JSON to `backend/error.log`.
 
 ## Configuration
 
