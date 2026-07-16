@@ -1,10 +1,11 @@
-import express from "express";
+import express, { type Request, type Response } from "express";
 import jsonwebtoken from "jsonwebtoken";
 import dotenv from "dotenv";
 import { randomUUID } from "node:crypto";
 import { usersService } from "../api/users/users-service.js";
 import { db } from "../database/index.js";
-dotenv.config();
+import { logger } from "../config/logger.js";
+dotenv.config({ quiet: true });
 export const authRouter = express.Router();
 /* interface JwtPayload {
   sub: string;
@@ -23,11 +24,16 @@ if (!JWT_ACCESS_TOKEN_SECRET_KEY || !JWT_REFRESH_TOKEN_SECRET_KEY) {
   if (!JWT_REFRESH_TOKEN_SECRET_KEY)
     missing.push("JWT_REFRESH_TOKEN_SECRET_KEY");
   const message = `Missing env var(s): ${missing.join(", ")}`;
-  console.error(message);
+  logger.error({ missingEnvVars: missing }, message);
   throw new Error(message);
 }
 
-async function createAuthTokens(req, res, success, userId) {
+function createAuthTokens(
+  _req: Request,
+  res: Response,
+  success: boolean,
+  userId: string | null,
+): void {
   if (success) {
     const accessTokenPayload = {
       sub: userId,
@@ -74,7 +80,7 @@ async function createAuthTokens(req, res, success, userId) {
   }
 }
 
-async function verifyUserCredentials(email, password) {
+async function verifyUserCredentials(email: string, password: string) {
   try {
     const user = await usersService.login(db, email, password);
     return {
@@ -89,7 +95,7 @@ async function verifyUserCredentials(email, password) {
   }
 }
 
-async function createNewUser(email, password) {
+async function createNewUser(email: string, password: string) {
   try {
     const baseUsername = email.split("@")[0]?.trim() || "user";
     const username = `${baseUsername}-${randomUUID().slice(0, 8)}`;
@@ -144,10 +150,7 @@ authRouter.post("/refresh", async (req, res) => {
     );
     res.status(200).send({ accessToken });
   } catch (error) {
-    if (
-      error?.name === "TokenExpiredError" ||
-      error?.name === "JsonWebTokenError"
-    ) {
+    if (error instanceof jsonwebtoken.JsonWebTokenError) {
       return res.status(401).json({
         error: {
           code: "AUTHENTICATION_FAILED",
@@ -155,7 +158,7 @@ authRouter.post("/refresh", async (req, res) => {
         },
       });
     }
-    console.error("Error refreshing token", error);
+    req.log.error({ err: error }, "Failed to refresh access token");
     res.status(500).json({
       error: {
         code: "INTERNAL_SERVER_ERROR",

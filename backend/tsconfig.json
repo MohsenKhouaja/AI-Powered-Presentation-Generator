@@ -14,6 +14,7 @@
     "strict": true
   },
   "include": [
+    "app.ts",
     "api/**/*.ts",
     "config/**/*.ts",
     "database/**/*.ts",

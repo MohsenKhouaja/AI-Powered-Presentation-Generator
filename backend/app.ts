@@ -5,15 +5,16 @@ import express, {
 } from "express";
 import { mkdirSync } from "node:fs";
 import path from "node:path";
-import cors from "cors";
+import cors, { type CorsOptions } from "cors";
 import dotenv from "dotenv";
 import authMiddleware from "./middleware/auth.js";
 import cookieParser from "cookie-parser";
 import { apiRouter } from "./api/router.js";
 import authRouter from "./routes/auth.js";
 import { UPLOAD_PATH } from "./config/uploads.js";
+import { httpLogger, logger } from "./config/logger.js";
 
-dotenv.config();
+dotenv.config({ quiet: true });
 
 const missingEnvVars = [];
 if (!process.env.JWT_ACCESS_TOKEN_SECRET_KEY) missingEnvVars.push("JWT_ACCESS_TOKEN_SECRET_KEY");
@@ -32,7 +33,7 @@ const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
   .map((origin) => origin.trim())
   .filter(Boolean);
 
-const corsOptions = {
+const corsOptions: CorsOptions = {
   credentials: true,
   origin: (origin, callback) => {
     if (!origin) return callback(null, true);
@@ -42,6 +43,7 @@ const corsOptions = {
 };
 
 // Middleware
+app.use(httpLogger);
 app.use(cors(corsOptions));
 app.use(cookieParser());
 app.use(express.json());
@@ -58,12 +60,7 @@ app.get("/health", (req, res) => {
 });
 
 // Error handler
-app.use((err: any | Error, req: Request, res: Response, next: NextFunction) => {
-  console.error("Unhandled error:", err);
-  if (err instanceof Error && err.stack) {
-    console.error(err.stack);
-  }
-
+app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
   const status =
     typeof (err as { status?: unknown })?.status === "number"
       ? (err as { status: number }).status
@@ -77,6 +74,8 @@ app.use((err: any | Error, req: Request, res: Response, next: NextFunction) => {
       : typeof (err as { message?: unknown })?.message === "string"
         ? (err as { message: string }).message
         : "An unexpected error occurred";
+
+  res.err = err instanceof Error ? err : new Error(errorMessage);
 
   const safeMessage =
     status === 500
@@ -94,7 +93,7 @@ app.use((req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+  logger.info({ port: PORT }, "HTTP server started");
 });
 
 export default app;

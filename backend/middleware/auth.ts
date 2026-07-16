@@ -1,8 +1,10 @@
 import jsonwebtoken from "jsonwebtoken";
 import dotenv from "dotenv";
-dotenv.config();
+import type { NextFunction, Request, Response } from "express";
+import type { UUID } from "node:crypto";
+dotenv.config({ quiet: true });
 
-function authMiddleware(req, res, next) {
+function authMiddleware(req: Request, res: Response, next: NextFunction) {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -21,7 +23,8 @@ function authMiddleware(req, res, next) {
     if (!payload || typeof payload !== "object" || !("sub" in payload)) {
       return res.status(401).json({ message: "Unauthorized, invalid token" });
     }
-    req.authenticatedUserId = payload.sub;
+    req.authenticatedUserId = payload.sub as UUID;
+    req.log = req.log.child({ userId: payload.sub });
     next();
   } catch (error) {
     const message =
