@@ -29,7 +29,8 @@ Root scripts: `docker:up`, `docker:down`, `docker:logs`, `docker:rebuild`.
 ## Setup
 
 - **`.env`** in `backend/` needs: `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `MONGO_URI`, `JWT_ACCESS_TOKEN_SECRET_KEY`, `JWT_REFRESH_TOKEN_SECRET_KEY`, `ALLOWED_ORIGINS` (comma-separated)
-- Docker Compose provides **MongoDB only** (port 27017). MySQL must run separately.
+- Docker Compose provides **MongoDB** (port 27017), local **Loki** (port 3100),
+  and local **Grafana** (port 3002). MySQL must run separately.
 - Upload dir (`uploads/`) auto-created by `app.ts:25` — no manual step.
 - `ALLOWED_ORIGINS` controls CORS — frontend dev server origin must be listed.
 

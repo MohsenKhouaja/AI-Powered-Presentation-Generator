@@ -149,9 +149,7 @@ export const httpLogger = pinoHttp<Request, Response>({
     err: pino.stdSerializers.err,
   },
   customProps(req) {
-    return req.authenticatedUserId
-      ? { userId: req.authenticatedUserId }
-      : {};
+    return req.authenticatedUserId ? { userId: req.authenticatedUserId } : {};
   },
   customLogLevel(_req, res, error) {
     if (error || res.statusCode >= 500) return "error";
