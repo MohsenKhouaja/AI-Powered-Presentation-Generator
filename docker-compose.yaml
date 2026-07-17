@@ -13,6 +13,22 @@ services:
     volumes:
       - ./observability/loki-config.yaml:/etc/loki/loki-config.yaml:ro
       - loki_data:/loki
+  grafana:
+    image: grafana/grafana:13.1.0
+    depends_on:
+      - loki
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_PLUGINS_PREINSTALL_DISABLED: "true"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+    ports:
+      - "127.0.0.1:3002:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./observability/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
 volumes:
   mongo_data:
   loki_data:
+  grafana_data:
