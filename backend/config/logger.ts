@@ -5,10 +5,12 @@ import type { Request, Response } from "express";
 import dotenv from "dotenv";
 import pino from "pino";
 import { pinoHttp } from "pino-http";
+import type { LokiOptions } from "pino-loki";
 
 dotenv.config({ quiet: true });
 
 const environment = process.env.NODE_ENV ?? "development";
+const serviceName = process.env.SERVICE_NAME ?? "p2m-backend";
 const prettyLogs =
   process.env.LOG_PRETTY === undefined
     ? environment === "development"
@@ -34,9 +36,27 @@ const errorStream = pino.destination({
   mkdir: true,
 });
 
+const lokiStream = process.env.LOKI_URL
+  ? pino.transport<LokiOptions>({
+      target: "pino-loki",
+      options: {
+        host: process.env.LOKI_URL,
+        labels: {
+          service: serviceName,
+          environment,
+        },
+        batching: {
+          interval: 5,
+          maxBufferSize: 10_000,
+        },
+      },
+    })
+  : undefined;
+
 const logStreams = pino.multistream([
   { level: "trace", stream: consoleStream },
   { level: "error", stream: errorStream },
+  ...(lokiStream ? [{ level: "trace" as const, stream: lokiStream }] : []),
 ]);
 
 export const logger = pino(
@@ -47,10 +67,11 @@ export const logger = pino(
     base: {
       pid: process.pid,
       hostname: hostname(),
-      service: process.env.SERVICE_NAME ?? "p2m-backend",
+      service: serviceName,
       environment,
     },
-    timestamp: pino.stdTimeFunctions.isoTime,
+    // pino-loki converts Pino's numeric epoch milliseconds to Loki nanoseconds.
+    timestamp: pino.stdTimeFunctions.epochTime,
     redact: {
       paths: [
         "req.headers.authorization",
