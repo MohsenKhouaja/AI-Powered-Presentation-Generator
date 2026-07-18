@@ -59,6 +59,20 @@ const logStreams = pino.multistream([
   ...(lokiStream ? [{ level: "trace" as const, stream: lokiStream }] : []),
 ]);
 
+interface ClosableLogStream {
+  closed?: boolean;
+  destroyed?: boolean;
+  end(): void;
+  once(event: "close", listener: () => void): this;
+  once(event: "error", listener: (error: Error) => void): this;
+  off(event: "close", listener: () => void): this;
+  off(event: "error", listener: (error: Error) => void): this;
+}
+
+const closableStreams = [consoleStream, errorStream, lokiStream].filter(
+  (stream): stream is NonNullable<typeof stream> => stream !== undefined,
+) as ClosableLogStream[];
+
 export const logger = pino(
   {
     level:
@@ -95,6 +109,45 @@ export const logger = pino(
   },
   logStreams,
 );
+
+function closeStream(stream: ClosableLogStream): Promise<void> {
+  if (stream.closed || stream.destroyed) return Promise.resolve();
+
+  return new Promise((resolve, reject) => {
+    const onClose = () => {
+      stream.off("error", onError);
+      resolve();
+    };
+    const onError = (error: Error) => {
+      stream.off("close", onClose);
+      reject(error);
+    };
+
+    stream.once("close", onClose);
+    stream.once("error", onError);
+    stream.end();
+  });
+}
+
+export function flushLoggerSync(): void {
+  logStreams.flushSync();
+}
+
+export async function closeLogger(): Promise<void> {
+  flushLoggerSync();
+
+  const results = await Promise.allSettled(closableStreams.map(closeStream));
+  const failures = results
+    .filter((result) => result.status === "rejected")
+    .map((result) => result.reason);
+
+  if (failures.length > 0) {
+    throw new AggregateError(
+      failures,
+      "One or more logging destinations failed to close",
+    );
+  }
+}
 
 function sanitizeUrl(rawUrl: string): string {
   try {

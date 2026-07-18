@@ -13,6 +13,7 @@ import { apiRouter } from "./api/router.js";
 import authRouter from "./routes/auth.js";
 import { UPLOAD_PATH } from "./config/uploads.js";
 import { httpLogger, logger } from "./config/logger.js";
+import { registerGracefulShutdown } from "./shutdown.js";
 
 dotenv.config({ quiet: true });
 
@@ -92,8 +93,10 @@ app.use((req, res) => {
   res.status(404).json({ error: "Route not found" });
 });
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   logger.info({ port: PORT }, "HTTP server started");
 });
+
+registerGracefulShutdown(server);
 
 export default app;
