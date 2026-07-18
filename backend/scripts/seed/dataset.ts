@@ -44,7 +44,7 @@ export const SEED_USERS: SeedUser[] = [
 export type SeedSlide = {
   /** 1-based display order, maps to slides.slide_order in MySQL. */
   order: number;
-  /** Hardcoded Markdown stored in MongoDB slides_content. */
+  /** Hardcoded Markdown stored in MySQL slides.content. */
   markdown: string;
 };
 

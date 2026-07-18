@@ -54,6 +54,7 @@ export const slides = mysqlTable(
     presentationId: varchar("presentation_id", { length: 255 })
       .notNull()
       .references(() => presentations.id, { onDelete: "cascade" }),
+    content: text("content").notNull(),
     slideOrder: int("slide_order").notNull(),
   },
   (table) => [

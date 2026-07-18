@@ -1,4 +1,3 @@
-import e from "express";
 import {
   contexts,
   editAccess,
@@ -14,7 +13,7 @@ export type NewUserRow = Omit<typeof users.$inferInsert, "id">;
 export type PresentationRow = typeof presentations.$inferSelect;
 export type NewPresentationRow = Omit<typeof presentations.$inferInsert, "id">;
 export type presentationDetail = PresentationRow & {
-  slides: SlideRowWithContent[];
+  slides: SlideRow[];
   context: ContextWithFilesRow;
   AccessType: "own" | "edit";
 };
@@ -25,9 +24,6 @@ export type contextUpdate = Partial<NewContextRow> & { id: string };
 export type ContextWithFilesRow = ContextRow & { files: downloadedFile[] };
 
 export type SlideRow = typeof slides.$inferSelect;
-export type SlideRowWithContent = typeof slides.$inferSelect & {
-  content: string;
-};
 export type NewSlideRow = Omit<typeof slides.$inferInsert, "id">;
 
 export type FileRow = typeof files.$inferSelect;

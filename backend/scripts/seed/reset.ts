@@ -1,35 +1,21 @@
 import type { UUID } from "node:crypto";
 
 import { and, inArray, like } from "drizzle-orm";
-import type { Collection, DeleteResult } from "mongodb";
 
-import { db, mongoDB } from "../../database/index.js";
-import { presentations, slides, users } from "../../database/drizzle/schema.js";
+import { db } from "../../database/index.js";
+import { presentations, users } from "../../database/drizzle/schema.js";
 
 import { SEED_PRESENTATION_TITLE_PREFIX, SEED_USERS } from "./dataset.js";
-
-type SlideContentDocument = {
-  _id: string;
-  slide_content: string;
-};
-
-const slidesContentCollection: Collection<SlideContentDocument> =
-  mongoDB.collection<SlideContentDocument>("slides_content");
 
 export type ResetResult = {
   seedEmails: string[];
   seedUserIds: UUID[];
   seedPresentationIds: UUID[];
-  seedSlideIds: UUID[];
-  deletedMongoDocs: number;
   deletedPresentationsAttempted: number;
   deletedUsersAttempted: number;
 };
 
 export const runReset = async (): Promise<ResetResult> => {
-  // Touch `mongoDB` so the import is intentional (and ensures it’s initialized).
-  void mongoDB.databaseName;
-
   const seedEmails = SEED_USERS.map((u) => u.email);
 
   const seedUsers =
@@ -64,23 +50,6 @@ export const runReset = async (): Promise<ResetResult> => {
 
   const seedPresentationIds = seedPresentations.map((p) => p.id as UUID);
 
-  const seedSlides =
-    seedPresentationIds.length > 0
-      ? await db
-          .select({ id: slides.id })
-          .from(slides)
-          .where(inArray(slides.presentationId, seedPresentationIds))
-      : [];
-
-  const seedSlideIds = seedSlides.map((s) => s.id as UUID);
-
-  const mongoDeleteResult: DeleteResult =
-    seedSlideIds.length > 0
-      ? await slidesContentCollection.deleteMany({
-          _id: { $in: seedSlideIds },
-        })
-      : ({ deletedCount: 0 } as unknown as DeleteResult);
-
   if (seedPresentationIds.length > 0) {
     await db
       .delete(presentations)
@@ -95,8 +64,6 @@ export const runReset = async (): Promise<ResetResult> => {
     seedEmails,
     seedUserIds,
     seedPresentationIds,
-    seedSlideIds,
-    deletedMongoDocs: mongoDeleteResult.deletedCount ?? 0,
     deletedPresentationsAttempted: seedPresentationIds.length,
     deletedUsersAttempted: seedEmails.length,
   };

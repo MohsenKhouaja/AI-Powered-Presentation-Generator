@@ -1,10 +1,4 @@
 services:
-  mongo:
-    image: mongo:7
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo_data:/data/db
   loki:
     image: grafana/loki:3.7.0
     command: -config.file=/etc/loki/loki-config.yaml
@@ -29,6 +23,5 @@ services:
       - grafana_data:/var/lib/grafana
       - ./observability/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
 volumes:
-  mongo_data:
   loki_data:
   grafana_data:

@@ -1,7 +1,7 @@
 import type { Server } from "node:http";
 import process from "node:process";
 import { closeLogger, flushLoggerSync, logger } from "./config/logger.js";
-import { db, mongoDB } from "./database/index.js";
+import { db } from "./database/index.js";
 
 type ShutdownSignal = "SIGINT" | "SIGTERM";
 
@@ -19,7 +19,10 @@ function getShutdownTimeoutMs(): number {
 function closeHttpServer(server: Server): Promise<void> {
   return new Promise((resolve, reject) => {
     server.close((error) => {
-      if (error) {
+      if (
+        error &&
+        (error as NodeJS.ErrnoException).code !== "ERR_SERVER_NOT_RUNNING"
+      ) {
         reject(error);
         return;
       }
@@ -29,20 +32,7 @@ function closeHttpServer(server: Server): Promise<void> {
 }
 
 async function closeDatabases(): Promise<void> {
-  const results = await Promise.allSettled([
-    mongoDB.client.close(),
-    db.$client.end(),
-  ]);
-  const failures = results
-    .filter((result) => result.status === "rejected")
-    .map((result) => result.reason);
-
-  if (failures.length > 0) {
-    throw new AggregateError(
-      failures,
-      "One or more database clients failed to close",
-    );
-  }
+  await db.$client.end();
 }
 
 async function runShutdown(

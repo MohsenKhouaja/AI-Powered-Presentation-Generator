@@ -23,9 +23,6 @@ try {
     const reset = await runReset();
     console.log("\nSeed reset complete.\n");
     console.log(
-      `- Mongo slides_content deleted: ${reset.deletedMongoDocs} (by slide IDs from seed presentations)`,
-    );
-    console.log(
       `- MySQL presentations delete attempted: ${reset.deletedPresentationsAttempted} (title prefix + seed owner IDs)`,
     );
     console.log(
@@ -35,7 +32,6 @@ try {
 
   const result = await runSeed();
   printSummary(result);
-  // Pragmatic dev exit: the Mongo client is created in `database/index.ts`.
   process.exit(0);
 } catch (error) {
   console.error("Seed failed:", error);

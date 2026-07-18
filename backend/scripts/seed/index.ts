@@ -4,9 +4,8 @@ import type { UUID } from "node:crypto";
 import { promisify } from "node:util";
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
-import type { Collection } from "mongodb";
 
-import { db, mongoDB } from "../../database/index.js";
+import { db } from "../../database/index.js";
 import {
   contexts,
   editAccess,
@@ -20,11 +19,6 @@ import { UPLOAD_PATH } from "../../config/uploads.js";
 import { SEED_EDIT_ACCESS, SEED_PRESENTATIONS, SEED_USERS } from "./dataset.js";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-
-type SlideContentDocument = {
-  _id: string;
-  slide_content: string;
-};
 
 type SeededUser = {
   id: UUID;
@@ -54,17 +48,9 @@ const hashPassword = async (password: string): Promise<string> => {
   return `scrypt$${salt}$${derivedKey.toString("hex")}`;
 };
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-const slidesContentCollection: Collection<SlideContentDocument> =
-  mongoDB.collection<SlideContentDocument>("slides_content");
-
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export const runSeed = async (): Promise<SeedResult> => {
-  // Touch mongoDB so the import is intentional and the connection is verified.
-  void mongoDB.databaseName;
-
   // ── 1. Insert users ──────────────────────────────────────────────────────
 
   const seededUsers: SeededUser[] = [];
@@ -149,9 +135,7 @@ export const runSeed = async (): Promise<SeedResult> => {
       await db.insert(filesTable).values(fileRows);
     }
 
-    // ── 2d. Slides — MySQL row + MongoDB document ────────────────────────
-
-    const mongoDocuments: SlideContentDocument[] = [];
+    // ── 2d. Slides ───────────────────────────────────────────────────────
 
     for (const seedSlide of seedPresentation.slides) {
       const slideId = randomUUID() as UUID;
@@ -159,18 +143,9 @@ export const runSeed = async (): Promise<SeedResult> => {
       await db.insert(slides).values({
         id: slideId,
         presentationId,
+        content: seedSlide.markdown,
         slideOrder: seedSlide.order,
       });
-
-      // Collect mongo docs to bulk-insert after all MySQL rows succeed.
-      mongoDocuments.push({
-        _id: slideId,
-        slide_content: seedSlide.markdown,
-      });
-    }
-
-    if (mongoDocuments.length > 0) {
-      await slidesContentCollection.insertMany(mongoDocuments);
     }
   }
 

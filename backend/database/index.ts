@@ -2,7 +2,6 @@ import dotenv from "dotenv";
 import process from "process";
 import { drizzle } from "drizzle-orm/mysql2";
 import { relations } from "./drizzle/schema.js";
-import { MongoClient } from "mongodb";
 import { logger } from "../config/logger.js";
 
 dotenv.config({ quiet: true });
@@ -25,13 +24,3 @@ export type TransactionContext = Parameters<
 export type DBContext = typeof db | TransactionContext;
 
 logger.info({ database: "mysql" }, "Database client initialized");
-
-if (!process.env.MONGO_URI) {
-  throw new Error("E042: MONGO_URI environment variable is not set");
-}
-
-const mongoClient = new MongoClient(process.env.MONGO_URI);
-await mongoClient.connect();
-export const mongoDB = mongoClient.db("myDatabase");
-
-logger.info({ database: "mongodb" }, "Database connection established");

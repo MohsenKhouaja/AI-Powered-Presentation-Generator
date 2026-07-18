@@ -1,22 +1,15 @@
 import { randomUUID } from "node:crypto";
 import type { UUID } from "node:crypto";
 import { and, eq, gt, sql } from "drizzle-orm";
-import type { Collection } from "mongodb";
 import type { DBContext } from "../../database/index.js";
-import { mongoDB } from "../../database/index.js";
 import { slides } from "../../database/drizzle/schema.js";
-import type { SlideRow, SlideRowWithContent } from "../../database/types.js";
+import type { SlideRow } from "../../database/types.js";
 import { contextService } from "../contexts/contexts-service.js";
 
 export type slideOrder = {
   id: UUID;
   order: number;
 }[];
-
-type SlideContentDocument = {
-  _id: string;
-  slide_content: string;
-};
 
 type SlideCreateInput = {
   content: string;
@@ -33,9 +26,6 @@ type ContextFileForPrompt = {
   sizeBytes?: number;
   base64File?: string;
 };
-
-const slidesContentCollection: Collection<SlideContentDocument> =
-  mongoDB.collection<SlideContentDocument>("slides_content");
 
 const OPENROUTER_CHAT_COMPLETIONS_URL =
   "https://openrouter.ai/api/v1/chat/completions";
@@ -208,37 +198,17 @@ const assertCanEditPresentation = async (
   }
 };
 
-const getMongoContentBySlideId = async (slideId: UUID): Promise<string> => {
-  const contentDoc = await slidesContentCollection.findOne({ _id: slideId });
-  if (!contentDoc) {
-    throw new Error("E025: slide content not found");
-  }
-  return contentDoc.slide_content;
-};
-
 const findMany = async (
   db: DBContext,
   userId: UUID,
   presentationId: UUID,
-): Promise<SlideRowWithContent[]> => {
+): Promise<SlideRow[]> => {
   await assertCanEditPresentation(db, presentationId, userId);
 
-  const slideRows: SlideRow[] = await db.query.slides.findMany({
+  return await db.query.slides.findMany({
     where: { presentationId },
     orderBy: { slideOrder: "asc" },
   });
-
-  return await Promise.all(
-    slideRows.map(async (slideRow) => {
-      const mongoContent = await getMongoContentBySlideId(slideRow.id as UUID);
-      return {
-        id: slideRow.id,
-        presentationId: slideRow.presentationId,
-        content: mongoContent,
-        slideOrder: slideRow.slideOrder,
-      };
-    }),
-  );
 };
 
 const findOne = async (
@@ -246,7 +216,7 @@ const findOne = async (
   userId: UUID,
   presentationId: UUID,
   slideId: UUID,
-): Promise<SlideRowWithContent> => {
+): Promise<SlideRow> => {
   await assertCanEditPresentation(db, presentationId, userId);
 
   const slideRow = await db.query.slides.findFirst({
@@ -257,13 +227,7 @@ const findOne = async (
     throw new Error("E026: slide doesn't exist");
   }
 
-  const mongoContent = await getMongoContentBySlideId(slideId);
-  return {
-    id: slideRow.id,
-    presentationId: slideRow.presentationId,
-    content: mongoContent,
-    slideOrder: slideRow.slideOrder,
-  };
+  return slideRow;
 };
 
 const create = async (
@@ -271,7 +235,7 @@ const create = async (
   userId: UUID,
   presentationId: UUID,
   input: SlideCreateInput,
-): Promise<SlideRowWithContent> => {
+): Promise<SlideRow> => {
   await assertCanEditPresentation(db, presentationId, userId);
 
   const slideId = randomUUID();
@@ -292,12 +256,8 @@ const create = async (
   await db.insert(slides).values({
     id: slideId,
     presentationId,
+    content: input.content,
     slideOrder: nextOrder,
-  });
-
-  await slidesContentCollection.insertOne({
-    _id: slideId,
-    slide_content: input.content,
   });
 
   return {
@@ -314,7 +274,7 @@ const update = async (
   presentationId: UUID,
   slideId: UUID,
   content: string,
-): Promise<SlideRowWithContent> => {
+): Promise<SlideRow> => {
   await assertCanEditPresentation(db, presentationId, userId);
 
   const slideRow = await db.query.slides.findFirst({
@@ -325,11 +285,12 @@ const update = async (
     throw new Error("E027: slide doesn't exist");
   }
 
-  await slidesContentCollection.updateOne(
-    { _id: slideId },
-    { $set: { slide_content: content } },
-    { upsert: true },
-  );
+  await db
+    .update(slides)
+    .set({ content })
+    .where(
+      and(eq(slides.id, slideId), eq(slides.presentationId, presentationId)),
+    );
 
   return {
     id: slideRow.id,
@@ -367,8 +328,6 @@ const removeOne = async (
         ),
       );
   });
-  await slidesContentCollection.deleteOne({ _id: slideId });
-
   return { id: slideId, deleted: true };
 };
 
@@ -404,7 +363,7 @@ const generateFromContext = async (
   presentationId: UUID,
   contextId: UUID,
   numSlides?: number,
-): Promise<SlideRowWithContent[]> => {
+): Promise<SlideRow[]> => {
   await assertCanEditPresentation(db, presentationId, userId);
 
   const presentationRow = await db.query.presentations.findFirst({
@@ -439,12 +398,11 @@ const generateFromContext = async (
     numSlides,
   });
 
-  await removeAllByPresentation(db, userId, presentationId);
-
-  const createdSlides: SlideRowWithContent[] = [];
-  const mongoDocs: SlideContentDocument[] = [];
+  const createdSlides: SlideRow[] = [];
 
   await db.transaction(async (tx) => {
+    await tx.delete(slides).where(eq(slides.presentationId, presentationId));
+
     for (let i = 0; i < generated.length; i++) {
       const slideId = randomUUID() as UUID;
       const markdown = generated[i].markdown;
@@ -453,6 +411,7 @@ const generateFromContext = async (
       await tx.insert(slides).values({
         id: slideId,
         presentationId,
+        content: markdown,
         slideOrder,
       });
 
@@ -462,14 +421,8 @@ const generateFromContext = async (
         content: markdown,
         slideOrder,
       });
-
-      mongoDocs.push({ _id: slideId, slide_content: markdown });
     }
   });
-
-  if (mongoDocs.length > 0) {
-    await slidesContentCollection.insertMany(mongoDocs);
-  }
 
   return createdSlides;
 };
@@ -480,22 +433,7 @@ const removeAllByPresentation = async (
   presentationId: UUID,
 ) => {
   await assertCanEditPresentation(db, presentationId, userId);
-
-  const slideRows = await db.query.slides.findMany({
-    where: { presentationId },
-    columns: { id: true },
-  });
-
-  if (!slideRows) {
-    throw new Error("E034: slide doesn't exist");
-  }
-
-  if (slideRows.length > 0) {
-    await slidesContentCollection.deleteMany({
-      _id: { $in: slideRows.map((slide) => slide.id) },
-    });
-    await db.delete(slides).where(eq(slides.presentationId, presentationId));
-  }
+  await db.delete(slides).where(eq(slides.presentationId, presentationId));
 };
 
 export const slidesService = {

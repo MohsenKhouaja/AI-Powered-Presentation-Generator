@@ -2,9 +2,8 @@ import { randomUUID } from "node:crypto";
 import type { UUID } from "node:crypto";
 
 import type { DBContext } from "../../database/index.js";
-import { presentations, slides } from "../../database/drizzle/schema.js";
+import { presentations } from "../../database/drizzle/schema.js";
 import { eq } from "drizzle-orm";
-import { mongoDB } from "../../database/index.js";
 import type {
   NewPresentationRow,
   presentationDetail,
@@ -13,14 +12,6 @@ import type {
 } from "../../database/types.js";
 import { contextService } from "../contexts/contexts-service.js";
 import { slidesService } from "../slides/slides-service.js";
-
-type SlideContentDocument = {
-  _id: string;
-  slide_content: string;
-};
-
-const slidesContentCollection =
-  mongoDB.collection<SlideContentDocument>("slides_content");
 
 const hasActiveEditAccess = async (
   db: DBContext,
@@ -120,17 +111,6 @@ const findOneDetailed = async (
   }
 
   const slideRows: SlideRow[] = presentationRow.slides ?? [];
-  const slideContentDocs =
-    slideRows.length > 0
-      ? await slidesContentCollection
-          .find({ _id: { $in: slideRows.map((slide) => slide.id) } })
-          .toArray()
-      : [];
-
-  const slideContentMap = new Map<string, string>(
-    slideContentDocs.map((doc) => [doc._id, doc.slide_content]),
-  );
-
   const contextRow = await contextService.findOne(
     db,
     presentationRow.contexts.id as UUID,
@@ -141,12 +121,7 @@ const findOneDetailed = async (
     title: presentationRow.title,
     userId: presentationRow.userId as UUID,
     createdAt: presentationRow.createdAt,
-    slides: slideRows.map((row) => ({
-      id: row.id,
-      content: slideContentMap.get(row.id)!,
-      presentationId: row.presentationId,
-      slideOrder: row.slideOrder,
-    })),
+    slides: slideRows,
     context: contextRow,
     AccessType: accessType,
   };
