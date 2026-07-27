@@ -1,12 +1,12 @@
 CREATE TABLE `contexts` (
-	`id` varchar(255) PRIMARY KEY,
+	`id` varchar(255) PRIMARY KEY DEFAULT (UUID()),
 	`prompt` text NOT NULL DEFAULT (''),
-	`presentation_id` varchar(255),
+	`presentation_id` varchar(255) NOT NULL,
 	CONSTRAINT `contexts_presentation_id_unique` UNIQUE INDEX(`presentation_id`)
 );
 --> statement-breakpoint
 CREATE TABLE `edit_access` (
-	`id` varchar(255) PRIMARY KEY,
+	`id` varchar(255) PRIMARY KEY DEFAULT (UUID()),
 	`user_id` varchar(255) NOT NULL,
 	`presentation_id` varchar(255) NOT NULL,
 	`expires_at` timestamp,
@@ -14,32 +14,30 @@ CREATE TABLE `edit_access` (
 );
 --> statement-breakpoint
 CREATE TABLE `files` (
-	`id` varchar(255) PRIMARY KEY,
+	`id` varchar(255) PRIMARY KEY DEFAULT (UUID()),
 	`context_id` varchar(255) NOT NULL,
-	`storage_key` text NOT NULL,
+	`file_name` text NOT NULL,
 	`mime_type` text NOT NULL,
-	`file_type` text NOT NULL,
 	`size_bytes` bigint NOT NULL,
 	`original_name` text NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE `presentations` (
-	`id` varchar(255) PRIMARY KEY,
+	`id` varchar(255) PRIMARY KEY DEFAULT (UUID()),
 	`title` varchar(255) NOT NULL,
 	`user_id` varchar(255) NOT NULL,
 	`created_at` timestamp NOT NULL DEFAULT (now())
 );
 --> statement-breakpoint
 CREATE TABLE `slides` (
-	`id` varchar(255) PRIMARY KEY,
+	`id` varchar(255) PRIMARY KEY DEFAULT (UUID()),
 	`presentation_id` varchar(255) NOT NULL,
-	`content` text NOT NULL DEFAULT (''),
 	`slide_order` int NOT NULL,
 	CONSTRAINT `slides_presentation_id_slide_order_unique` UNIQUE INDEX(`presentation_id`,`slide_order`)
 );
 --> statement-breakpoint
 CREATE TABLE `users` (
-	`id` varchar(255) PRIMARY KEY,
+	`id` varchar(255) PRIMARY KEY DEFAULT (UUID()),
 	`username` varchar(255) NOT NULL,
 	`email` varchar(255) NOT NULL,
 	`password` varchar(255) NOT NULL,

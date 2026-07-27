@@ -13,14 +13,13 @@ interface SidebarContextProps {
   effectivePromptDraft: string;
   pendingFiles: File[];
   contextFiles: { id: string; originalName: string; fileName: string }[] | undefined;
-  isCreating: boolean;
   isUpdating: boolean;
   isGenerating: boolean;
   numSlides: string;
   onPromptChange: (value: string) => void;
   onPickFiles: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onRemovePendingFile: (file: File) => void;
-  onMarkFileForDeletion: (fileName: string) => void;
+  onMarkFileForDeletion: (fileId: string) => void;
   onSaveContext: (event: React.FormEvent) => void;
   onGenerateSlides: () => void;
   onNumSlidesChange: (value: string) => void;
@@ -31,7 +30,6 @@ export function SidebarContext({
   effectivePromptDraft,
   pendingFiles,
   contextFiles,
-  isCreating,
   isUpdating,
   isGenerating,
   numSlides,
@@ -64,7 +62,7 @@ export function SidebarContext({
           {contextFiles?.map((file) => (
             <div key={file.id} className="flex items-center justify-between rounded border px-2 py-1 text-xs">
               <span className="line-clamp-1">{file.originalName}</span>
-              <Button size="icon" variant="ghost" type="button" onClick={() => onMarkFileForDeletion(file.fileName)} aria-label={`Mark ${file.originalName} for deletion`}>
+              <Button size="icon" variant="ghost" type="button" onClick={() => onMarkFileForDeletion(file.id)} aria-label={`Mark ${file.originalName} for deletion`}>
                 <XIcon className="size-3" />
               </Button>
             </div>
@@ -78,8 +76,8 @@ export function SidebarContext({
             </div>
           ))}
         </div>
-        <Button type="submit" className="w-full" disabled={isCreating || isUpdating}>
-          {isCreating || isUpdating ? <Spinner className="mr-2" /> : <SaveIcon className="mr-2 size-4" />}
+        <Button type="submit" className="w-full" disabled={isUpdating}>
+          {isUpdating ? <Spinner className="mr-2" /> : <SaveIcon className="mr-2 size-4" />}
           Save Context
         </Button>
       </form>

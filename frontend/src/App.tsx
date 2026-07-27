@@ -21,6 +21,10 @@ export default function App() {
       <AuthProvider>
         <BrowserRouter>
           <Routes>
+            <Route
+              path="/share"
+              element={<SharedPresentationReadOnlyPage />}
+            />
             <Route element={<PublicOnlyRoute />}>
               <Route path="/" element={<LandingPage />} />
             </Route>
@@ -38,10 +42,6 @@ export default function App() {
               <Route
                 path="/presentations/:id/edit"
                 element={<PresentationEditorPage />}
-              />
-              <Route
-                path="/shared/:id"
-                element={<SharedPresentationReadOnlyPage />}
               />
             </Route>
 

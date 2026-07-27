@@ -17,7 +17,9 @@ export function SharedPresentationsPage() {
   const sharedPresentations = useMemo(
     () =>
       (presentationsQuery.data ?? []).filter(
-        (presentation) => presentation.AccessType === "edit",
+        (presentation) =>
+          presentation.accessLevel === "editor" ||
+          presentation.accessLevel === "viewer",
       ),
     [presentationsQuery.data],
   );
@@ -27,7 +29,7 @@ export function SharedPresentationsPage() {
       <section className="rounded-lg border p-4">
         <h2 className="text-lg font-semibold">Shared presentations</h2>
         <p className="text-sm text-muted-foreground">
-          Presentations with edit access shared with you.
+          Presentations shared directly with your account.
         </p>
       </section>
 
@@ -62,11 +64,17 @@ export function SharedPresentationsPage() {
               id={presentation.id}
               title={presentation.title}
               createdAt={presentation.createdAt}
-              badgeLabel="Shared"
+              badgeLabel={
+                presentation.accessLevel === "editor"
+                  ? "Shared editor"
+                  : "Shared viewer"
+              }
               badgeVariant="outline"
               actions={[
                 { type: "link", label: "Viewer", to: `/presentations/${presentation.id}`, variant: "outline" },
-                { type: "link", label: "Read-only share", to: `/shared/${presentation.id}`, variant: "default" },
+                ...(presentation.capabilities.editContent
+                  ? [{ type: "link" as const, label: "Edit", to: `/presentations/${presentation.id}/edit`, variant: "default" as const }]
+                  : []),
               ]}
             />
           ))}

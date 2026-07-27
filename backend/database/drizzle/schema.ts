@@ -1,6 +1,7 @@
 import {
   bigint,
   int,
+  mysqlEnum,
   mysqlTable,
   text,
   timestamp,
@@ -78,8 +79,8 @@ export const files = mysqlTable("files", {
   originalName: text("original_name").notNull(),
 });
 
-export const editAccess = mysqlTable(
-  "edit_access",
+export const presentationAccessGrants = mysqlTable(
+  "presentation_access_grants",
   {
     id: varchar("id", { length: 255 })
       .primaryKey()
@@ -90,11 +91,38 @@ export const editAccess = mysqlTable(
     presentationId: varchar("presentation_id", { length: 255 })
       .notNull()
       .references(() => presentations.id, { onDelete: "cascade" }),
+    permission: mysqlEnum("permission", ["viewer", "editor"])
+      .notNull()
+      .default("editor"),
     expiresAt: timestamp("expires_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
   },
   (table) => [
-    unique("edit_access_user_id_presentation_id_unique").on(
+    unique("presentation_access_grants_user_presentation_unique").on(
       table.userId,
+      table.presentationId,
+    ),
+  ],
+);
+
+export const presentationShareLinks = mysqlTable(
+  "presentation_share_links",
+  {
+    id: varchar("id", { length: 255 })
+      .primaryKey()
+      .default(sql`(UUID())`),
+    presentationId: varchar("presentation_id", { length: 255 })
+      .notNull()
+      .references(() => presentations.id, { onDelete: "cascade" }),
+    tokenHash: varchar("token_hash", { length: 64 }).notNull().unique(),
+    expiresAt: timestamp("expires_at"),
+    revokedAt: timestamp("revoked_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+  },
+  (table) => [
+    unique("presentation_share_links_presentation_unique").on(
       table.presentationId,
     ),
   ],
@@ -107,7 +135,8 @@ const tablesSchema = {
   contexts,
   slides,
   files,
-  editAccess,
+  presentationAccessGrants,
+  presentationShareLinks,
 };
 
 export const usersRelations = defineRelationsPart(tablesSchema, (r) => ({
@@ -116,9 +145,9 @@ export const usersRelations = defineRelationsPart(tablesSchema, (r) => ({
       from: r.users.id,
       to: r.presentations.userId,
     }),
-    editAccess: r.many.editAccess({
+    accessGrants: r.many.presentationAccessGrants({
       from: r.users.id,
-      to: r.editAccess.userId,
+      to: r.presentationAccessGrants.userId,
     }),
   },
 }));
@@ -139,9 +168,13 @@ export const presentationsRelations = defineRelationsPart(
         from: r.presentations.id,
         to: r.slides.presentationId,
       }),
-      editAccess: r.many.editAccess({
+      accessGrants: r.many.presentationAccessGrants({
         from: r.presentations.id,
-        to: r.editAccess.presentationId,
+        to: r.presentationAccessGrants.presentationId,
+      }),
+      shareLink: r.one.presentationShareLinks({
+        from: r.presentations.id,
+        to: r.presentationShareLinks.presentationId,
       }),
     },
   }),
@@ -178,19 +211,38 @@ export const filesRelations = defineRelationsPart(tablesSchema, (r) => ({
   },
 }));
 
-export const editAccessRelations = defineRelationsPart(tablesSchema, (r) => ({
-  editAccess: {
-    user: r.one.users({
-      from: r.editAccess.userId,
-      to: r.users.id,
-    }),
-    presentation: r.one.presentations({
-      from: r.editAccess.presentationId,
-      to: r.presentations.id,
-    }),
-  },
-}));
+export const presentationAccessGrantsRelations = defineRelationsPart(
+  tablesSchema,
+  (r) => ({
+    presentationAccessGrants: {
+      user: r.one.users({
+        from: r.presentationAccessGrants.userId,
+        to: r.users.id,
+      }),
+      presentation: r.one.presentations({
+        from: r.presentationAccessGrants.presentationId,
+        to: r.presentations.id,
+      }),
+    },
+  }),
+);
 
+export const presentationShareLinksRelations = defineRelationsPart(
+  tablesSchema,
+  (r) => ({
+    presentationShareLinks: {
+      presentation: r.one.presentations({
+        from: r.presentationShareLinks.presentationId,
+        to: r.presentations.id,
+      }),
+    },
+  }),
+);
+
+/*
+ * Keep every relationship in the shared relation registry so Drizzle query
+ * helpers expose the same vocabulary to authorization and domain modules.
+ */
 export const relations = {
   ...defineRelationsPart(tablesSchema),
   ...usersRelations,
@@ -198,5 +250,6 @@ export const relations = {
   ...contextsRelations,
   ...slidesRelations,
   ...filesRelations,
-  ...editAccessRelations,
+  ...presentationAccessGrantsRelations,
+  ...presentationShareLinksRelations,
 };

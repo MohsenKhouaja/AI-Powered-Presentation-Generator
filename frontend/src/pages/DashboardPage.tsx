@@ -29,10 +29,13 @@ export function DashboardPage() {
   const deleteMutation = useDeletePresentationMutation();
   const presentations = presentationsQuery.data ?? [];
   const ownedPresentations = presentations.filter(
-    (presentation) => presentation.AccessType === "own",
+    (presentation) => presentation.accessLevel === "owner",
   );
   const editablePresentations = presentations.filter(
-    (presentation) => presentation.AccessType === "edit",
+    (presentation) => presentation.accessLevel === "editor",
+  );
+  const viewOnlyPresentations = presentations.filter(
+    (presentation) => presentation.accessLevel === "viewer",
   );
 
   const onCreate = async (event: FormEvent) => {
@@ -123,8 +126,12 @@ export function DashboardPage() {
                     badgeVariant="outline"
                     actions={[
                       { type: "link", label: "View", to: `/presentations/${presentation.id}`, variant: "outline" },
-                      { type: "link", label: "Edit", to: `/presentations/${presentation.id}/edit`, variant: "outline" },
-                      { type: "button", label: "Delete", onClick: () => deleteMutation.mutate(presentation.id), variant: "destructive", disabled: deleteMutation.isPending },
+                      ...(presentation.capabilities.editContent
+                        ? [{ type: "link" as const, label: "Edit", to: `/presentations/${presentation.id}/edit`, variant: "outline" as const }]
+                        : []),
+                      ...(presentation.capabilities.delete
+                        ? [{ type: "button" as const, label: "Delete", onClick: () => deleteMutation.mutate(presentation.id), variant: "destructive" as const, disabled: deleteMutation.isPending }]
+                        : []),
                     ]}
                   />
                 ))}
@@ -162,13 +169,40 @@ export function DashboardPage() {
                     badgeVariant="outline"
                     actions={[
                       { type: "link", label: "View", to: `/presentations/${presentation.id}`, variant: "outline" },
-                      { type: "link", label: "Edit", to: `/presentations/${presentation.id}/edit`, variant: "outline" },
+                      ...(presentation.capabilities.editContent
+                        ? [{ type: "link" as const, label: "Edit", to: `/presentations/${presentation.id}/edit`, variant: "outline" as const }]
+                        : []),
                     ]}
                   />
                 ))}
               </div>
             )}
           </section>
+
+          {viewOnlyPresentations.length > 0 ? (
+            <section className="space-y-4" aria-label="View-only presentations">
+              <header>
+                <h3 className="text-2xl font-semibold tracking-tight text-foreground">
+                  Shared view-only
+                </h3>
+              </header>
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {viewOnlyPresentations.map((presentation) => (
+                  <PresentationCard
+                    key={presentation.id}
+                    id={presentation.id}
+                    title={presentation.title}
+                    createdAt={presentation.createdAt}
+                    badgeLabel="Viewer"
+                    badgeVariant="outline"
+                    actions={[
+                      { type: "link", label: "View", to: `/presentations/${presentation.id}`, variant: "outline" },
+                    ]}
+                  />
+                ))}
+              </div>
+            </section>
+          ) : null}
         </div>
       ) : null}
     </div>

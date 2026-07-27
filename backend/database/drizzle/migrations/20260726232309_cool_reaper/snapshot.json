@@ -1,9 +1,9 @@
 {
   "version": "6",
   "dialect": "mysql",
-  "id": "c527e8e6-890d-4462-b5ef-1ea6a49999b2",
+  "id": "715bdd43-e9b5-4735-8a6c-9a3d8793e6a0",
   "prevIds": [
-    "00000000-0000-0000-0000-000000000000"
+    "c527e8e6-890d-4462-b5ef-1ea6a49999b2"
   ],
   "ddl": [
     {
@@ -11,11 +11,15 @@
       "entityType": "tables"
     },
     {
-      "name": "edit_access",
+      "name": "files",
       "entityType": "tables"
     },
     {
-      "name": "files",
+      "name": "presentation_access_grants",
+      "entityType": "tables"
+    },
+    {
+      "name": "presentation_share_links",
       "entityType": "tables"
     },
     {
@@ -34,7 +38,7 @@
       "type": "varchar(255)",
       "notNull": true,
       "autoIncrement": false,
-      "default": null,
+      "default": "(UUID())",
       "onUpdateNow": false,
       "onUpdateNowFsp": null,
       "charSet": null,
@@ -60,7 +64,7 @@
     },
     {
       "type": "varchar(255)",
-      "notNull": false,
+      "notNull": true,
       "autoIncrement": false,
       "default": null,
       "onUpdateNow": false,
@@ -76,63 +80,7 @@
       "type": "varchar(255)",
       "notNull": true,
       "autoIncrement": false,
-      "default": null,
-      "onUpdateNow": false,
-      "onUpdateNowFsp": null,
-      "charSet": null,
-      "collation": null,
-      "generated": null,
-      "name": "id",
-      "entityType": "columns",
-      "table": "edit_access"
-    },
-    {
-      "type": "varchar(255)",
-      "notNull": true,
-      "autoIncrement": false,
-      "default": null,
-      "onUpdateNow": false,
-      "onUpdateNowFsp": null,
-      "charSet": null,
-      "collation": null,
-      "generated": null,
-      "name": "user_id",
-      "entityType": "columns",
-      "table": "edit_access"
-    },
-    {
-      "type": "varchar(255)",
-      "notNull": true,
-      "autoIncrement": false,
-      "default": null,
-      "onUpdateNow": false,
-      "onUpdateNowFsp": null,
-      "charSet": null,
-      "collation": null,
-      "generated": null,
-      "name": "presentation_id",
-      "entityType": "columns",
-      "table": "edit_access"
-    },
-    {
-      "type": "timestamp",
-      "notNull": false,
-      "autoIncrement": false,
-      "default": null,
-      "onUpdateNow": false,
-      "onUpdateNowFsp": null,
-      "charSet": null,
-      "collation": null,
-      "generated": null,
-      "name": "expires_at",
-      "entityType": "columns",
-      "table": "edit_access"
-    },
-    {
-      "type": "varchar(255)",
-      "notNull": true,
-      "autoIncrement": false,
-      "default": null,
+      "default": "(UUID())",
       "onUpdateNow": false,
       "onUpdateNowFsp": null,
       "charSet": null,
@@ -166,7 +114,7 @@
       "charSet": null,
       "collation": null,
       "generated": null,
-      "name": "storage_key",
+      "name": "file_name",
       "entityType": "columns",
       "table": "files"
     },
@@ -181,20 +129,6 @@
       "collation": null,
       "generated": null,
       "name": "mime_type",
-      "entityType": "columns",
-      "table": "files"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoIncrement": false,
-      "default": null,
-      "onUpdateNow": false,
-      "onUpdateNowFsp": null,
-      "charSet": null,
-      "collation": null,
-      "generated": null,
-      "name": "file_type",
       "entityType": "columns",
       "table": "files"
     },
@@ -230,7 +164,203 @@
       "type": "varchar(255)",
       "notNull": true,
       "autoIncrement": false,
+      "default": "(UUID())",
+      "onUpdateNow": false,
+      "onUpdateNowFsp": null,
+      "charSet": null,
+      "collation": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "presentation_access_grants"
+    },
+    {
+      "type": "varchar(255)",
+      "notNull": true,
+      "autoIncrement": false,
       "default": null,
+      "onUpdateNow": false,
+      "onUpdateNowFsp": null,
+      "charSet": null,
+      "collation": null,
+      "generated": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "table": "presentation_access_grants"
+    },
+    {
+      "type": "varchar(255)",
+      "notNull": true,
+      "autoIncrement": false,
+      "default": null,
+      "onUpdateNow": false,
+      "onUpdateNowFsp": null,
+      "charSet": null,
+      "collation": null,
+      "generated": null,
+      "name": "presentation_id",
+      "entityType": "columns",
+      "table": "presentation_access_grants"
+    },
+    {
+      "type": "enum('viewer','editor')",
+      "notNull": true,
+      "autoIncrement": false,
+      "default": "'editor'",
+      "onUpdateNow": false,
+      "onUpdateNowFsp": null,
+      "charSet": null,
+      "collation": null,
+      "generated": null,
+      "name": "permission",
+      "entityType": "columns",
+      "table": "presentation_access_grants"
+    },
+    {
+      "type": "timestamp",
+      "notNull": false,
+      "autoIncrement": false,
+      "default": null,
+      "onUpdateNow": false,
+      "onUpdateNowFsp": null,
+      "charSet": null,
+      "collation": null,
+      "generated": null,
+      "name": "expires_at",
+      "entityType": "columns",
+      "table": "presentation_access_grants"
+    },
+    {
+      "type": "timestamp",
+      "notNull": true,
+      "autoIncrement": false,
+      "default": "(now())",
+      "onUpdateNow": false,
+      "onUpdateNowFsp": null,
+      "charSet": null,
+      "collation": null,
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "presentation_access_grants"
+    },
+    {
+      "type": "timestamp",
+      "notNull": true,
+      "autoIncrement": false,
+      "default": "(now())",
+      "onUpdateNow": true,
+      "onUpdateNowFsp": null,
+      "charSet": null,
+      "collation": null,
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "presentation_access_grants"
+    },
+    {
+      "type": "varchar(255)",
+      "notNull": true,
+      "autoIncrement": false,
+      "default": "(UUID())",
+      "onUpdateNow": false,
+      "onUpdateNowFsp": null,
+      "charSet": null,
+      "collation": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "presentation_share_links"
+    },
+    {
+      "type": "varchar(255)",
+      "notNull": true,
+      "autoIncrement": false,
+      "default": null,
+      "onUpdateNow": false,
+      "onUpdateNowFsp": null,
+      "charSet": null,
+      "collation": null,
+      "generated": null,
+      "name": "presentation_id",
+      "entityType": "columns",
+      "table": "presentation_share_links"
+    },
+    {
+      "type": "varchar(64)",
+      "notNull": true,
+      "autoIncrement": false,
+      "default": null,
+      "onUpdateNow": false,
+      "onUpdateNowFsp": null,
+      "charSet": null,
+      "collation": null,
+      "generated": null,
+      "name": "token_hash",
+      "entityType": "columns",
+      "table": "presentation_share_links"
+    },
+    {
+      "type": "timestamp",
+      "notNull": false,
+      "autoIncrement": false,
+      "default": null,
+      "onUpdateNow": false,
+      "onUpdateNowFsp": null,
+      "charSet": null,
+      "collation": null,
+      "generated": null,
+      "name": "expires_at",
+      "entityType": "columns",
+      "table": "presentation_share_links"
+    },
+    {
+      "type": "timestamp",
+      "notNull": false,
+      "autoIncrement": false,
+      "default": null,
+      "onUpdateNow": false,
+      "onUpdateNowFsp": null,
+      "charSet": null,
+      "collation": null,
+      "generated": null,
+      "name": "revoked_at",
+      "entityType": "columns",
+      "table": "presentation_share_links"
+    },
+    {
+      "type": "timestamp",
+      "notNull": true,
+      "autoIncrement": false,
+      "default": "(now())",
+      "onUpdateNow": false,
+      "onUpdateNowFsp": null,
+      "charSet": null,
+      "collation": null,
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "presentation_share_links"
+    },
+    {
+      "type": "timestamp",
+      "notNull": true,
+      "autoIncrement": false,
+      "default": "(now())",
+      "onUpdateNow": true,
+      "onUpdateNowFsp": null,
+      "charSet": null,
+      "collation": null,
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "presentation_share_links"
+    },
+    {
+      "type": "varchar(255)",
+      "notNull": true,
+      "autoIncrement": false,
+      "default": "(UUID())",
       "onUpdateNow": false,
       "onUpdateNowFsp": null,
       "charSet": null,
@@ -286,7 +416,7 @@
       "type": "varchar(255)",
       "notNull": true,
       "autoIncrement": false,
-      "default": null,
+      "default": "(UUID())",
       "onUpdateNow": false,
       "onUpdateNowFsp": null,
       "charSet": null,
@@ -314,7 +444,7 @@
       "type": "text",
       "notNull": true,
       "autoIncrement": false,
-      "default": "('')",
+      "default": null,
       "onUpdateNow": false,
       "onUpdateNowFsp": null,
       "charSet": null,
@@ -342,7 +472,7 @@
       "type": "varchar(255)",
       "notNull": true,
       "autoIncrement": false,
-      "default": null,
+      "default": "(UUID())",
       "onUpdateNow": false,
       "onUpdateNowFsp": null,
       "charSet": null,
@@ -407,7 +537,7 @@
         "id"
       ],
       "name": "PRIMARY",
-      "table": "edit_access",
+      "table": "files",
       "entityType": "pks"
     },
     {
@@ -415,7 +545,15 @@
         "id"
       ],
       "name": "PRIMARY",
-      "table": "files",
+      "table": "presentation_access_grants",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "name": "PRIMARY",
+      "table": "presentation_share_links",
       "entityType": "pks"
     },
     {
@@ -441,6 +579,22 @@
       "name": "PRIMARY",
       "table": "users",
       "entityType": "pks"
+    },
+    {
+      "columns": [
+        {
+          "value": "token_hash",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "using": null,
+      "algorithm": null,
+      "lock": null,
+      "nameExplicit": false,
+      "name": "token_hash_unique",
+      "table": "presentation_share_links",
+      "entityType": "indexes"
     },
     {
       "columns": [
@@ -506,9 +660,25 @@
       "algorithm": null,
       "lock": null,
       "nameExplicit": true,
-      "name": "edit_access_user_id_presentation_id_unique",
+      "name": "presentation_access_grants_user_presentation_unique",
       "entityType": "indexes",
-      "table": "edit_access"
+      "table": "presentation_access_grants"
+    },
+    {
+      "columns": [
+        {
+          "value": "presentation_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "using": null,
+      "algorithm": null,
+      "lock": null,
+      "nameExplicit": true,
+      "name": "presentation_share_links_presentation_unique",
+      "entityType": "indexes",
+      "table": "presentation_share_links"
     },
     {
       "columns": [
@@ -547,6 +717,21 @@
     },
     {
       "columns": [
+        "context_id"
+      ],
+      "tableTo": "contexts",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "files_context_id_contexts_id_fkey",
+      "entityType": "fks",
+      "table": "files"
+    },
+    {
+      "columns": [
         "user_id"
       ],
       "tableTo": "users",
@@ -558,7 +743,7 @@
       "nameExplicit": false,
       "name": "edit_access_user_id_users_id_fkey",
       "entityType": "fks",
-      "table": "edit_access"
+      "table": "presentation_access_grants"
     },
     {
       "columns": [
@@ -573,22 +758,22 @@
       "nameExplicit": false,
       "name": "edit_access_presentation_id_presentations_id_fkey",
       "entityType": "fks",
-      "table": "edit_access"
+      "table": "presentation_access_grants"
     },
     {
       "columns": [
-        "context_id"
+        "presentation_id"
       ],
-      "tableTo": "contexts",
+      "tableTo": "presentations",
       "columnsTo": [
         "id"
       ],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
-      "name": "files_context_id_contexts_id_fkey",
+      "name": "presentation_share_links_presentation_id_presentations_id_fkey",
       "entityType": "fks",
-      "table": "files"
+      "table": "presentation_share_links"
     },
     {
       "columns": [

@@ -19,25 +19,18 @@ import {
   usePresentationsQuery,
 } from "@/hooks/queries/usePresentations";
 import {
-  useCreateContextMutation,
-  useUpdateContextMutation,
-} from "@/hooks/queries/useContextsFiles";
-import {
   useLogoutMutation,
   useSessionQuery,
 } from "@/hooks/queries/useAuthSession";
 
 export function QueryStateShowcase() {
   const [titleInput, setTitleInput] = useState("");
-  const [promptInput, setPromptInput] = useState("Context prompt sample");
 
   const sessionQuery = useSessionQuery();
   const logoutMutation = useLogoutMutation();
   const presentationsQuery = usePresentationsQuery();
   const createPresentationMutation = useCreatePresentationMutation();
   const deletePresentationMutation = useDeletePresentationMutation();
-  const createContextMutation = useCreateContextMutation();
-  const updateContextMutation = useUpdateContextMutation();
 
   return (
     <div className="mx-auto w-full max-w-5xl p-6 space-y-4">
@@ -68,7 +61,7 @@ export function QueryStateShowcase() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4">
         <Card>
           <CardHeader>
             <CardTitle>Presentations Query + Mutations</CardTitle>
@@ -157,67 +150,6 @@ export function QueryStateShowcase() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Contexts/Files Mutations</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Input
-              value={promptInput}
-              onChange={(event) => setPromptInput(event.target.value)}
-              placeholder="Context prompt"
-            />
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() =>
-                  createContextMutation.mutate({ prompt: promptInput })
-                }
-                disabled={createContextMutation.isPending}
-              >
-                {createContextMutation.isPending ? <Spinner /> : null}
-                Create Context
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  const contextId = createContextMutation.data?.context.id;
-                  if (!contextId) {
-                    return;
-                  }
-                  updateContextMutation.mutate({
-                    contextId,
-                    prompt: `${promptInput} (updated)`,
-                    deletedFilesNames: [],
-                  });
-                }}
-                disabled={
-                  updateContextMutation.isPending || !createContextMutation.data
-                }
-              >
-                {updateContextMutation.isPending ? <Spinner /> : null}
-                Update Last Context
-              </Button>
-            </div>
-            {createContextMutation.isError || updateContextMutation.isError ? (
-              <Alert variant="destructive">
-                <AlertCircleIcon />
-                <AlertTitle>Context mutation failed</AlertTitle>
-                <AlertDescription>
-                  {(createContextMutation.error as Error | null)?.message ??
-                    (updateContextMutation.error as Error | null)?.message ??
-                    "Unknown error"}
-                </AlertDescription>
-              </Alert>
-            ) : null}
-            {createContextMutation.isSuccess ||
-            updateContextMutation.isSuccess ? (
-              <p className="text-sm text-muted-foreground">
-                Context mutation succeeded and related caches were invalidated.
-              </p>
-            ) : null}
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

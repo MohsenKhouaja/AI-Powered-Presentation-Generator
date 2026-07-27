@@ -22,4 +22,11 @@ export const queryKeys = {
     detail: (presentationId: string, slideId: string) =>
       ["slides", "presentation", presentationId, "slide", slideId] as const,
   },
+  access: {
+    grants: (presentationId: string) =>
+      ["access", presentationId, "grants"] as const,
+    shareLink: (presentationId: string) =>
+      ["access", presentationId, "share-link"] as const,
+    publicShare: () => ["public-share"] as const,
+  },
 } as const;
