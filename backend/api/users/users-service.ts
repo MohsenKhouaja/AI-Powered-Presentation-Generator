@@ -3,12 +3,17 @@ import { promisify } from "node:util";
 import type { DBContext } from "../../database/index.js";
 import { users } from "../../database/drizzle/schema.js";
 import type { NewUserRow, UserRow } from "../../database/types.js";
+import {
+  badRequest,
+  conflict,
+  unauthorized,
+} from "../../errors/http-error.js";
 
 const scrypt = promisify(crypto.scrypt);
 
 const hashPassword = async (password: string): Promise<string> => {
   if (!password || typeof password !== "string") {
-    throw new Error("E035: Password is required");
+    throw badRequest("Password is required", "PASSWORD_REQUIRED");
   }
 
   const salt = crypto.randomBytes(16).toString("hex");
@@ -44,6 +49,13 @@ const verifyPassword = async (
   return crypto.timingSafeEqual(derivedKey, storedKey);
 };
 
+const isDuplicateEntryError = (
+  error: unknown,
+): error is { code: "ER_DUP_ENTRY" } =>
+  typeof error === "object" &&
+  error !== null &&
+  (error as { code?: unknown }).code === "ER_DUP_ENTRY";
+
 const signup = async (db: DBContext, user: NewUserRow): Promise<UserRow> => {
   const existingRow = await db.query.users.findFirst({
     where: {
@@ -53,17 +65,30 @@ const signup = async (db: DBContext, user: NewUserRow): Promise<UserRow> => {
   });
 
   if (existingRow) {
-    throw new Error("E036: User with this email or username already exists");
+    throw conflict(
+      "User with this email or username already exists",
+      "USER_ALREADY_EXISTS",
+    );
   }
 
   const userId = crypto.randomUUID() as string;
   const hashedPassword = await hashPassword(user.password);
-  await db.insert(users).values({
-    id: userId,
-    username: user.username,
-    email: user.email,
-    password: hashedPassword,
-  });
+  try {
+    await db.insert(users).values({
+      id: userId,
+      username: user.username,
+      email: user.email,
+      password: hashedPassword,
+    });
+  } catch (error) {
+    if (isDuplicateEntryError(error)) {
+      throw conflict(
+        "User with this email or username already exists",
+        "USER_ALREADY_EXISTS",
+      );
+    }
+    throw error;
+  }
 
   return {
     id: userId,
@@ -78,11 +103,11 @@ const login = async (
   password: string,
 ): Promise<UserRow> => {
   if (!email || typeof email !== "string") {
-    throw new Error("E037: Email is required");
+    throw badRequest("Email is required", "EMAIL_REQUIRED");
   }
 
   if (!password || typeof password !== "string") {
-    throw new Error("E038: Password is required");
+    throw badRequest("Password is required", "PASSWORD_REQUIRED");
   }
 
   const row = await db.query.users.findFirst({
@@ -96,12 +121,18 @@ const login = async (
   });
 
   if (!row) {
-    throw new Error("E039: Invalid email or password");
+    throw unauthorized(
+      "Invalid email or password",
+      "INVALID_CREDENTIALS",
+    );
   }
 
   const isPasswordValid = await verifyPassword(password, row.password);
   if (!isPasswordValid) {
-    throw new Error("E040: Invalid email or password");
+    throw unauthorized(
+      "Invalid email or password",
+      "INVALID_CREDENTIALS",
+    );
   }
 
   return {

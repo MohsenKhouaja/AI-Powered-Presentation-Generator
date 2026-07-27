@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>P2M Architecture Review</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({startOnLoad:true,theme:'neutral',themeVariables:{fontFamily:'Inter,sans-serif'}});</script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+body { font-family: 'Inter', sans-serif; }
+.card { border: 1px solid #e5e5e5; border-radius: 16px; background: #fff; overflow: hidden; }
+.card-header { padding: 20px 24px 0; }
+.card-body { padding: 0 24px 20px; }
+.badge-strong { background: #000; color: #fdfcfc; border-radius: 9999px; padding: 2px 12px; font-size: 12px; font-weight: 600; }
+.badge-explore { background: #f5f3f1; color: #000; border-radius: 9999px; padding: 2px 12px; font-size: 12px; font-weight: 600; border: 1px solid #e5e5e5; }
+.badge-spec { background: #fff; color: #777169; border-radius: 9999px; padding: 2px 12px; font-size: 12px; font-weight: 600; border: 1px solid #e5e5e5; }
+.diagram-box { background: #fafafa; border: 1px solid #e5e5e5; border-radius: 12px; padding: 16px; margin: 12px 0; }
+.file-tag { background: #f5f3f1; border: 1px solid #e5e5e5; border-radius: 9999px; padding: 2px 10px; font-size: 12px; display: inline-block; margin: 2px; }
+.section-divider { height: 1px; background: #e5e5e5; margin: 32px 0; }
+.top-pick { border: 2px solid #000; border-radius: 16px; background: #fff; overflow: hidden; }
+.top-pick-header { background: #000; color: #fdfcfc; padding: 16px 24px; }
+.warning-callout { background: #fff8f0; border: 1px solid #ffd9a8; border-radius: 12px; padding: 12px 16px; margin: 12px 0; font-size: 13px; }
+</style>
+</head>
+<body class="bg-[#fdfcfc] text-[#000] antialiased">
+
+<div class="max-w-5xl mx-auto px-6 py-12">
+
+<!-- Header -->
+<div class="mb-12">
+  <div class="flex items-center gap-3 mb-2">
+    <h1 class="text-[32px] font-[300] tracking-[-0.02em] m-0" style="font-family:'Cormorant Garamond',serif">Architecture Review</h1>
+    <span class="badge-strong">v1</span>
+  </div>
+  <p class="text-[#777169] text-[14px]">P2M — generated 2026-07-05 · based on <code class="bg-[#f5f3f1] px-1.5 py-0.5 rounded text-[13px]">/codebase-design</code> vocabulary</p>
+</div>
+
+<!-- Summary -->
+<div class="card mb-8">
+  <div class="card-body pt-5">
+    <div class="grid grid-cols-3 gap-6 text-center">
+      <div><div class="text-[36px] font-[300]" style="font-family:'Cormorant Garamond',serif">6</div><div class="text-[13px] text-[#777169]">candidates identified</div></div>
+      <div><div class="text-[36px] font-[300]" style="font-family:'Cormorant Garamond',serif">2</div><div class="text-[13px] text-[#777169]">strong recommendations</div></div>
+      <div><div class="text-[36px] font-[300]" style="font-family:'Cormorant Garamond',serif">2</div><div class="text-[13px] text-[#777169]">modules with seam opportunities</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== CANDIDATE 1 ===== -->
+<div class="card mb-6" id="c1">
+  <div class="card-header flex items-start justify-between">
+    <div>
+      <div class="flex items-center gap-3 mb-2">
+        <span class="text-[#777169] text-[13px] font-[500]">CANDIDATE 1</span>
+        <span class="badge-strong">Strong</span>
+      </div>
+      <h2 class="text-[24px] font-[600] m-0">Auth Extraction: Duplicated in 3 Routers, Missing in Contexts</h2>
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="mb-4">
+      <div class="text-[13px] font-[600] text-[#777169] mb-1">FILES</div>
+      <div>
+        <span class="file-tag">middleware/auth.ts</span>
+        <span class="file-tag">api/presentations/router.ts:9-25</span>
+        <span class="file-tag">api/slides/router.ts:10-26</span>
+        <span class="file-tag">api/presentations_access/router.ts:9-25</span>
+        <span class="file-tag">api/contexts/router.ts:41-91</span>
+        <span class="file-tag">api/contexts/contexts-service.ts</span>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-6">
+      <div>
+        <div class="text-[13px] font-[600] text-[#777169] mb-1">PROBLEM</div>
+        <p class="text-[14px] leading-[1.6] text-[#333] m-0">
+          The <code class="bg-[#f5f3f1] px-1 py-0.5 rounded text-[13px]">authMiddleware</code> at <code class="bg-[#f5f3f1] px-1 py-0.5 rounded text-[13px]">middleware/auth.ts</code> already extracts the JWT and sets <code class="bg-[#f5f3f1] px-1 py-0.5 rounded text-[13px]">req.authenticatedUserId</code>. Yet 3 out of 4 routers re-extract the token by duplicating the same 17-line <code class="bg-[#f5f3f1] px-1 py-0.5 rounded text-[13px]">getAuthenticatedUserId</code> function. Each copy re-verifies the JWT and re-parses the payload — redundant work and a maintenance hazard. Meanwhile the <strong>contexts router</strong> has no auth check at all: it never reads <code class="bg-[#f5f3f1] px-1 py-0.5 rounded text-[13px]">userId</code> and its service methods don't accept one, meaning any authenticated user can create/update contexts on any presentation.
+        </p>
+        <div class="warning-callout mt-3">
+          <strong>Security gap:</strong> <code class="bg-[#f5f3f1] px-1 py-0.5 rounded text-[13px]">POST /api/contexts</code> accepts <code class="bg-[#f5f3f1] px-1 py-0.5 rounded text-[13px]">presentationId</code> from the request body with no ownership check. A user can attach context to any presentation.
+        </div>
+      </div>
+      <div>
+        <div class="text-[13px] font-[600] text-[#777169] mb-1">SOLUTION</div>
+        <p class="text-[14px] leading-[1.6] text-[#333] m-0">
+          (1) Delete the 3 duplicate <code class="bg-[#f5f3f1] px-1 py-0.5 rounded text-[13px]">getAuthenticatedUserId</code> functions. (2) Fix the 11 handlers to read <code class="bg-[#f5f3f1] px-1 py-0.5 rounded text-[13px]">req.authenticatedUserId</code> from middleware instead. (3) Add <code class="bg-[#f5f3f1] px-1 py-0.5 rounded text-[13px]">userId</code> parameter to <code class="bg-[#f5f3f1] px-1 py-0.5 rounded text-[13px]">contextService.create</code> and <code class="bg-[#f5f3f1] px-1 py-0.5 rounded text-[13px]">update</code>, verify presentation ownership. (4) Type <code class="bg-[#f5f3f1] px-1 py-0.5 rounded text-[13px]">req.authenticatedUserId</code> so TS catches missing usage.
+        </p>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <div class="text-[13px] font-[600] text-[#777169] mb-2">BENEFITS</div>
+      <div class="grid grid-cols-2 gap-4 text-[13px]">
+        <div><span class="font-[700]">→</span> <strong>Locality</strong>: auth extraction lives in exactly one module. Change the token format once.</div>
+        <div><span class="font-[700]">→</span> <strong>Leverage</strong>: 11 handlers get the fix for free when the middleware changes.</div>
+        <div><span class="font-[700]">→</span> <strong>Security</strong>: contexts module gains authorization, closing a real gap.</div>
+        <div><span class="font-[700]">→</span> <strong>Depth</strong>: the middleware interface is "set userId on request" — deep. The duplicates are shallow (17 lines each with no added behaviour).</div>
+      </div>
+    </div>
+
+    <div class="diagram-box mt-4">
+      <div class="text-[13px] font-[600] text-[#777169] mb-2">BEFORE / AFTER</div>
+      <div class="mermaid">
+        graph LR
+          subgraph BEFORE
+            direction TB
+            M1["middleware/auth.ts<br/>sets req.userId"] -.->|ignored| R1
+            R1["presentations/router<br/>re-extracts JWT<br/>17 lines"]
+            R2["slides/router<br/>re-extracts JWT<br/>17 lines"]
+            R3["access/router<br/>re-extracts JWT<br/>17 lines"]
+            R4["contexts/router<br/>no auth check ❌"]
+          end
+          subgraph AFTER
+            direction TB
+            M2["middleware/auth.ts<br/>req.authenticatedUserId"] --> R1a["presentations/router<br/>req.authenticatedUserId"]
+            M2 --> R2a["slides/router<br/>req.authenticatedUserId"]
+            M2 --> R3a["access/router<br/>req.authenticatedUserId"]
+            M2 --> R4a["contexts/router<br/>+ ownership check ✅"]
+          end
+      </div>
+    </div>
+
+    <div class="text-[13px] text-[#777169] mt-3">
+      <strong>Deletion test:</strong> Delete the 3 duplicates → 11 handlers break, but fixing them to <code class="bg-[#f5f3f1] px-1 py-0.5 rounded text-[13px]">req.authenticatedUserId</code> is a one-line change each. Complexity concentrates in the middleware where it belongs.
+    </div>
+  </div>
+</div>
+
+<!-- ===== CANDIDATE 2 ===== -->
+<div class="card mb-6" id="c2">
+  <div class="card-header flex items-start justify-between">
+    <div>
+      <div class="flex items-center gap-3 mb-2">
+        <span class="text-[#777169] text-[13px] font-[500]">CANDIDATE 2</span>
+        <span class="badge-strong">Strong</span>
+      </div>
+      <h2 class="text-[24px] font-[600] m-0">useEditorState — 403-line God Hook</h2>
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="mb-4">
+      <div class="text-[13px] font-[600] text-[#777169] mb-1">FILES</div>
+      <div>
+        <span class="file-tag">frontend/src/components/editor/useEditorState.ts (403 lines)</span>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-6">
+      <div>
+        <div class="text-[13px] font-[600] text-[#777169] mb-1">PROBLEM</div>
+        <p class="text-[14px] leading-[1.6] text-[#333] m-0">
+          A single hook returning <strong>60+ properties</strong>: 5 React Query mutations, 16 state variables, 4 refs (autosave timers, saving set, saved-notice timer, preview wrapper), drag-and-drop state management, preview scaling via ResizeObserver, context CRUD orchestration, share-invite logic, and autosave scheduling with 1200ms debounce. The interface is nearly as large as the implementation — this is a <strong>shallow</strong> module. Understanding any one flow (e.g., "what happens when the user presses Ctrl+S?") requires tracing through 10+ state variables across the file. Poor <strong>locality</strong>: a change to autosave timing could break drag-and-drop logic that lives in the same closure.
+        </p>
+      </div>
+      <div>
+        <div class="text-[13px] font-[600] text-[#777169] mb-1">SOLUTION</div>
+        <p class="text-[14px] leading-[1.6] text-[#333] m-0">
+          Split into orthogonal sub-hooks, each with a small interface:
+        </p>
+        <ul class="text-[14px] leading-[1.6] text-[#333] mt-2 list-disc pl-4">
+          <li><code>useSlideAutosave(slideId, content)</code> — save scheduling + conflict detection</li>
+          <li><code>useSlideNavigation(slides, selectedIndex)</code> — selection, add, delete</li>
+          <li><code>useDragReorder(slides)</code> — drag state + drop handler</li>
+          <li><code>usePreviewScale(ref)</code> — ResizeObserver wrapper</li>
+          <li><code>useEditorContext(presentationId)</code> — context CRUD + AI generation</li>
+          <li><code>useEditorShare()</code> — share dialog state + invite</li>
+        </ul>
+        <p class="text-[14px] leading-[1.6] text-[#333] mt-2">Each sub-hook is <strong>deep</strong>: lots of internal behaviour behind a tiny interface. <code class="bg-[#f5f3f1] px-1 py-0.5 rounded text-[13px]">useEditorState</code> becomes a thin composition layer.</p>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <div class="text-[13px] font-[600] text-[#777169] mb-2">BENEFITS</div>
+      <div class="grid grid-cols-2 gap-4 text-[13px]">
+        <div><span class="font-[700]">→</span> <strong>Locality</strong>: autosave bugs live in one file, drag-and-drop bugs in another. Fixes don't cascade.</div>
+        <div><span class="font-[700]">→</span> <strong>Leverage</strong>: <code>usePreviewScale</code> could be reused for any scaled container, not just the editor.</div>
+        <div><span class="font-[700]">→</span> <strong>Testability</strong>: each sub-hook has a small test surface. Mock one mutation per hook, not all 5.</div>
+        <div><span class="font-[700]">→</span> <strong>Depth</strong>: each sub-hook hides internal complexity (timers, refs, state transitions) behind 2–4 parameters.</div>
+      </div>
+    </div>
+
+    <div class="diagram-box mt-4">
+      <div class="text-[13px] font-[600] text-[#777169] mb-2">BEFORE / AFTER</div>
+      <div class="mermaid">
+        graph LR
+          subgraph BEFORE
+            direction TB
+            E1["useEditorState<br/>(403 lines, 60+ return values)"]
+            E1 --> S1["slide state"]
+            E1 --> S2["autosave refs"]
+            E1 --> S3["drag state"]
+            E1 --> S4["preview scale"]
+            E1 --> S5["context state"]
+            E1 --> S6["share state"]
+          end
+          subgraph AFTER
+            direction TB
+            E2["useEditorState<br/>(composition, ~30 lines)"]
+            E2 --> H1["useSlideAutosave"]
+            E2 --> H2["useSlideNavigation"]
+            E2 --> H3["useDragReorder"]
+            E2 --> H4["usePreviewScale"]
+            E2 --> H5["useEditorContext"]
+            E2 --> H6["useEditorShare"]
+          end
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== CANDIDATE 3 ===== -->
+<div class="card mb-6" id="c3">
+  <div class="card-header flex items-start justify-between">
+    <div>
+      <div class="flex items-center gap-3 mb-2">
+        <span class="text-[#777169] text-[13px] font-[500]">CANDIDATE 3</span>
+        <span class="badge-explore">Worth exploring</span>
+      </div>
+      <h2 class="text-[24px] font-[600] m-0">AI Generation Tangled Inside Slides Service</h2>
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="mb-4">
+      <div class="text-[13px] font-[600] text-[#777169] mb-1">FILES</div>
+      <div>
+        <span class="file-tag">backend/api/slides/slides-service.ts:46-183</span>
+        <span class="file-tag">backend/api/slides/slides-service.ts:416-490</span>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-6">
+      <div>
+        <div class="text-[13px] font-[600] text-[#777169] mb-1">PROBLEM</div>
+        <p class="text-[14px] leading-[1.6] text-[#333] m-0">
+          <code class="bg-[#f5f3f1] px-1 py-0.5 rounded text-[13px]">generateSlidesWithOpenRouter</code> (138 lines) lives as a private function inside the slides service. It configures its own OpenAI client, builds a 90-line system prompt, implements JSON extraction/parsing, and normalises results. The AI concern is mixed with slide CRUD — a change to the prompt format requires editing the slides service file. The function is internally deep (lots of behaviour behind a single call) but it sits at the wrong <strong>seam</strong>.
+        </p>
+        <p class="text-[14px] leading-[1.6] text-[#333] mt-2">Following the <strong>one-adapter rule</strong>: there's currently one AI provider (OpenRouter), so the seam is hypothetical. But the function's internal complexity (138 lines with system prompts, JSON parsing, base64 truncation, error handling) makes it a strong candidate for extraction.</p>
+      </div>
+      <div>
+        <div class="text-[13px] font-[600] text-[#777169] mb-1">SOLUTION</div>
+        <p class="text-[14px] leading-[1.6] text-[#333] m-0">
+          Extract into <code class="bg-[#f5f3f1] px-1 py-0.5 rounded text-[13px]">api/ai/ai-service.ts</code> with a clean interface:
+        </p>
+        <div class="bg-[#f5f3f1] rounded-lg p-3 mt-2 text-[13px]">
+<pre>interface AiGenerationInput {
+  title: string;
+  contextPrompt: string;
+  files: ContextFileForPrompt[];
+  numSlides?: number;
+}
+
+async function generatePresentationSlides(
+  input: AiGenerationInput
+): Promise<GeneratedSlide[]></pre>
+        </div>
+        <p class="text-[14px] leading-[1.6] text-[#333] mt-2">The slides service then depends on this via its interface; <code class="bg-[#f5f3f1] px-1 py-0.5 rounded text-[13px]">slidesService.generateFromContext</code> calls <code class="bg-[#f5f3f1] px-1 py-0.5 rounded text-[13px]">aiService</code> as a dependency.</p>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <div class="text-[13px] font-[600] text-[#777169] mb-2">BENEFITS</div>
+      <div class="grid grid-cols-2 gap-4 text-[13px]">
+        <div><span class="font-[700]">→</span> <strong>Locality</strong>: prompt engineering, JSON parsing, and model config live in one module. Slide CRUD and AI generation evolve independently.</div>
+        <div><span class="font-[700]">→</span> <strong>Seam readiness</strong>: when a second AI provider is added, the seam becomes real. Tests can swap in a fake provider.</div>
+        <div><span class="font-[700]">→</span> <strong>Testability</strong>: <code>generatePresentationSlides</code> can be tested in isolation with a mocked OpenAI client.</div>
+      </div>
+    </div>
+
+    <div class="diagram-box mt-4">
+      <div class="text-[13px] font-[600] text-[#777169] mb-2">BEFORE / AFTER</div>
+      <div class="mermaid">
+        graph LR
+          subgraph BEFORE
+            direction TB
+            SR1["slides-router"] --> SS1["slides-service.ts<br/>(525 lines)"]
+            SS1 --> CRUD["slide CRUD"]
+            SS1 --> AI["generateSlidesWithOpenRouter<br/>138 lines inline"]
+          end
+          subgraph AFTER
+            direction TB
+            SR2["slides-router"] --> SS2["slides-service.ts<br/>(~387 lines)"]
+            SS2 --> CRUD2["slide CRUD"]
+            AI2["ai-service.ts<br/>(138 lines)"] --> OAI["OpenRouter"]
+            SS2 -.->|depends on| AI2
+          end
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== CANDIDATE 4 ===== -->
+<div class="card mb-6" id="c4">
+  <div class="card-header flex items-start justify-between">
+    <div>
+      <div class="flex items-center gap-3 mb-2">
+        <span class="text-[#777169] text-[13px] font-[500]">CANDIDATE 4</span>
+        <span class="badge-explore">Worth exploring</span>
+      </div>
+      <h2 class="text-[24px] font-[600] m-0">hasActiveEditAccess Duplicated Across Two Services</h2>
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="mb-4">
+      <div class="text-[13px] font-[600] text-[#777169] mb-1">FILES</div>
+      <div>
+        <span class="file-tag">api/presentations/presentations-service.ts:25-40</span>
+        <span class="file-tag">api/slides/slides-service.ts:185-200</span>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-6">
+      <div>
+        <div class="text-[13px] font-[600] text-[#777169] mb-1">PROBLEM</div>
+        <p class="text-[14px] leading-[1.6] text-[#333] m-0">
+          Two identical 15-line functions check whether a user has active edit access (look up <code class="bg-[#f5f3f1] px-1 py-0.5 rounded text-[13px]">editAccess</code> table, check expiry). If the access-check logic changes (e.g., adding a new condition, changing the OR clause), both copies must be updated. This violates <strong>locality</strong> — knowledge about "can this user edit?" is spread across two files.
+        </p>
+      </div>
+      <div>
+        <div class="text-[13px] font-[600] text-[#777169] mb-1">SOLUTION</div>
+        <p class="text-[14px] leading-[1.6] text-[#333] m-0">
+          Extract to a shared module, e.g. <code class="bg-[#f5f3f1] px-1 py-0.5 rounded text-[13px]">api/shared/access-checks.ts</code>, or fold it into the <code class="bg-[#f5f3f1] px-1 py-0.5 rounded text-[13px]">presentationsService</code> (which already has the function) and let slides service call it as a dependency.
+        </p>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <div class="text-[13px] font-[600] text-[#777169] mb-2">BENEFITS</div>
+      <div class="grid grid-cols-2 gap-4 text-[13px]">
+        <div><span class="font-[700]">→</span> <strong>Locality</strong>: one source of truth for access check logic.</div>
+        <div><span class="font-[700]">→</span> <strong>Leverage</strong>: a third service needing access checks gets it for free.</div>
+      </div>
+    </div>
+
+    <div class="diagram-box mt-4">
+      <div class="text-[13px] font-[600] text-[#777169] mb-2">BEFORE / AFTER</div>
+      <div class="mermaid">
+        graph LR
+          subgraph BEFORE
+            P1["presentations-service"] --> H1["hasActiveEditAccess<br/>(15 lines)"]
+            S1["slides-service"] --> H2["hasActiveEditAccess<br/>(15 lines, duplicate)"]
+          end
+          subgraph AFTER
+            SHARED["api/shared/access-checks.ts"] --> H3["hasActiveEditAccess<br/>(single source)"]
+            P2["presentations-service"] -.->|calls| SHARED
+            S2["slides-service"] -.->|calls| SHARED
+          end
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== CANDIDATE 5 ===== -->
+<div class="card mb-6" id="c5">
+  <div class="card-header flex items-start justify-between">
+    <div>
+      <div class="flex items-center gap-3 mb-2">
+        <span class="text-[#777169] text-[13px] font-[500]">CANDIDATE 5</span>
+        <span class="badge-spec">Speculative</span>
+      </div>
+      <h2 class="text-[24px] font-[600] m-0">Commented-out Zombie Routes</h2>
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="mb-4">
+      <div class="text-[13px] font-[600] text-[#777169] mb-1">FILES</div>
+      <div>
+        <span class="file-tag">api/slides/router.ts:36-51</span>
+        <span class="file-tag">api/presentations_access/router.ts:27-37, 71-81, 83-96</span>
+        <span class="file-tag">api/presentations_access/presentations_access-service.ts:81-193</span>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-6">
+      <div>
+        <div class="text-[13px] font-[600] text-[#777169] mb-1">PROBLEM</div>
+        <p class="text-[14px] leading-[1.6] text-[#333] m-0">
+          ~120 lines of commented-out code: 1 slide route, 3 access routes, and 3 access service functions. This is dead code that obscures the module's real interface. A navigator reading <code class="bg-[#f5f3f1] px-1 py-0.5 rounded text-[13px]">presentations_access/router.ts</code> must mentally parse which routes are actually active.
+        </p>
+        <div class="text-[13px] text-[#777169] mt-2"><strong>Deletion test:</strong> Delete them — complexity vanishes. Nothing breaks.</div>
+      </div>
+      <div>
+        <div class="text-[13px] font-[600] text-[#777169] mb-1">SOLUTION</div>
+        <p class="text-[14px] leading-[1.6] text-[#333] m-0">
+          Delete the commented-out blocks. Git history preserves the implementation for when these endpoints are needed.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== CANDIDATE 6 ===== -->
+<div class="card mb-6" id="c6">
+  <div class="card-header flex items-start justify-between">
+    <div>
+      <div class="flex items-center gap-3 mb-2">
+        <span class="text-[#777169] text-[13px] font-[500]">CANDIDATE 6</span>
+        <span class="badge-spec">Speculative</span>
+      </div>
+      <h2 class="text-[24px] font-[600] m-0">Dual-Database Slide Storage</h2>
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="mb-4">
+      <div class="text-[13px] font-[600] text-[#777169] mb-1">FILES</div>
+      <div>
+        <span class="file-tag">backend/api/slides/slides-service.ts</span>
+        <span class="file-tag">backend/api/presentations/presentations-service.ts</span>
+        <span class="file-tag">backend/database/index.ts</span>
+        <span class="file-tag">backend/database/drizzle/schema.ts:48-65</span>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-6">
+      <div>
+        <div class="text-[13px] font-[600] text-[#777169] mb-1">PROBLEM</div>
+        <p class="text-[14px] leading-[1.6] text-[#333] m-0">
+          Slide metadata (id, presentationId, slideOrder) lives in MySQL (Drizzle ORM). Slide content (the markdown body) lives in MongoDB. Every slide operation touches both databases with no transactional coordination:
+        </p>
+        <ul class="text-[14px] leading-[1.6] text-[#333] mt-2 list-disc pl-4">
+          <li><code>create</code>: MySQL insert + MongoDB insertOne — if MongoDB fails after MySQL, orphan row exists</li>
+          <li><code>removeOne</code>: MySQL transaction (delete + reorder) + MongoDB deleteOne — if MongoDB fails, slide content leaks</li>
+          <li><code>generateFromContext</code>: MySQL transaction + MongoDB insertMany — only the MySQL side is atomic</li>
+        </ul>
+      </div>
+      <div>
+        <div class="text-[13px] font-[600] text-[#777169] mb-1">SOLUTION</div>
+        <p class="text-[14px] leading-[1.6] text-[#333] m-0">
+          <strong>Option A:</strong> Move slide content into MySQL as a <code class="bg-[#f5f3f1] px-1 py-0.5 rounded text-[13px]">TEXT</code> column on the <code class="bg-[#f5f3f1] px-1 py-0.5 rounded text-[13px]">slides</code> table, eliminating MongoDB entirely. This simplifies deployment (no MongoDB daemon) and enables real transactions.
+        </p>
+        <p class="text-[14px] leading-[1.6] text-[#333] mt-2"><strong>Option B:</strong> Formalize MongoDB as the source of truth and use MySQL only as an index for ordering and relations. This inverts the current dependency direction.</p>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <div class="text-[13px] font-[600] text-[#777169] mb-2">BENEFITS (Option A)</div>
+      <div class="grid grid-cols-2 gap-4 text-[13px]">
+        <div><span class="font-[700]">→</span> <strong>Locality</strong>: all slide data in one database. One migration tool (Drizzle). One transaction boundary.</div>
+        <div><span class="font-[700]">→</span> <strong>Testability</strong>: no MongoDB mocking needed for slide tests. Simpler test setup.</div>
+        <div><span class="font-[700]">→</span> <strong>Deployment</strong>: remove MongoDB from docker-compose. One fewer stateful service to manage.</div>
+      </div>
+      <div class="warning-callout mt-3">
+        Contradicts the existing MongoDB usage spanning 5+ service files and the collection in <code class="bg-[#f5f3f1] px-1 py-0.5 rounded text-[13px]">backend/database/index.ts</code>. Worth reopening only if the deployment complexity of MongoDB is a real pain point.
+      </div>
+    </div>
+
+    <div class="diagram-box mt-4">
+      <div class="text-[13px] font-[600] text-[#777169] mb-2">BEFORE / AFTER</div>
+      <div class="mermaid">
+        graph LR
+          subgraph BEFORE
+            direction TB
+            SVC["slides-service"] --> MYSQL1["(MySQL)<br/>metadata"]
+            SVC --> MONGO1["(MongoDB)<br/>content"]
+            PRES["presentations-service"] --> MONGO2["(MongoDB)<br/>slide content"]
+          end
+          subgraph AFTER
+            direction TB
+            SVC2["slides-service"] --> MYSQL2["(MySQL)<br/>metadata + content"]
+            PRES2["presentations-service"] --> MYSQL2
+          end
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TOP RECOMMENDATION ===== -->
+<div class="section-divider"></div>
+
+<div class="top-pick">
+  <div class="top-pick-header flex items-center gap-3">
+    <span class="text-[36px]" style="font-family:'Cormorant Garamond',serif">★</span>
+    <div>
+      <div class="text-[13px] opacity-70">TOP RECOMMENDATION</div>
+      <h2 class="text-[20px] font-[600] m-0">Candidate 1: Auth Extraction</h2>
+    </div>
+  </div>
+  <div class="px-6 py-5">
+    <p class="text-[14px] leading-[1.6] m-0">
+      Tackle <strong>Candidate 1</strong> first because it's the clearest win across four dimensions:
+    </p>
+    <div class="grid grid-cols-4 gap-4 mt-4">
+      <div class="border border-[#e5e5e5] rounded-xl p-4 text-center">
+        <div class="text-[24px] font-[300]" style="font-family:'Cormorant Garamond',serif">Security</div>
+        <div class="text-[12px] text-[#777169]">Closes a real auth gap in the contexts module</div>
+      </div>
+      <div class="border border-[#e5e5e5] rounded-xl p-4 text-center">
+        <div class="text-[24px] font-[300]" style="font-family:'Cormorant Garamond',serif">Locality</div>
+        <div class="text-[12px] text-[#777169]">Concentrates auth extraction in one module</div>
+      </div>
+      <div class="border border-[#e5e5e5] rounded-xl p-4 text-center">
+        <div class="text-[24px] font-[300]" style="font-family:'Cormorant Garamond',serif">~50 lines</div>
+        <div class="text-[12px] text-[#777169]">Net reduction in duplicated code</div>
+      </div>
+      <div class="border border-[#e5e5e5] rounded-xl p-4 text-center">
+        <div class="text-[24px] font-[300]" style="font-family:'Cormorant Garamond',serif">Low risk</div>
+        <div class="text-[12px] text-[#777169]">Mechanical change — no behavioural alteration</div>
+      </div>
+    </div>
+    <p class="text-[14px] leading-[1.6] mt-4 mb-0">
+      It also unblocks Candidates 3 and 4 — once the auth pattern is clean, extracting the AI service and sharing the access-check function become easier to reason about.
+    </p>
+  </div>
+</div>
+
+<p class="text-center text-[#777169] text-[12px] mt-12">
+  Generated by the codebase-design improvement workflow · P2M · July 2026
+</p>
+
+</div>
+</body>
+</html>

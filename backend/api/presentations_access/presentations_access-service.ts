@@ -1,200 +1,274 @@
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import type { UUID } from "node:crypto";
-import type { DBContext } from "../../database/index.js";
-import { editAccess } from "../../database/drizzle/schema.js";
 import { eq } from "drizzle-orm";
-import type { EditAccessRow, NewEditAccessRow } from "../../database/types.js";
+import {
+  hashShareToken,
+  requirePresentationAccess,
+  requireShareLinkAccess,
+} from "../../authorization/presentation-authorization.js";
+import type { DBContext } from "../../database/index.js";
+import {
+  presentationAccessGrants,
+  presentationShareLinks,
+} from "../../database/drizzle/schema.js";
+import { conflict, notFound } from "../../errors/http-error.js";
 
-interface PresentationAccessEntry {
-  id: UUID;
+export type GrantPermission = "viewer" | "editor";
+
+type GrantInput = {
   email: string;
-  userId: UUID;
-  presentationId: UUID;
+  permission: GrantPermission;
   expiresAt: Date | null;
-  username: string;
-}
-
-type EditAccessWithUserRow = EditAccessRow & {
-  user: { username: string; email: string } | null;
 };
 
-const grantAccess = async (
-  db: DBContext,
-  userId: UUID,
-  editAccessInsert: NewEditAccessRow,
-): Promise<EditAccessRow> => {
-  const userRow = await db.query.users.findFirst({
-    where: { email: editAccessInsert.email },
-    columns: { id: true },
-  });
-  if (!userRow) {
-    throw new Error("E010: user doesn't exist");
-  }
-  const userIdFromEmail = userRow.id;
+const serializeGrant = (row: {
+  id: string;
+  permission: GrantPermission;
+  expiresAt: Date | null;
+  user: { id: string; username: string; email: string } | null;
+}) => ({
+  id: row.id,
+  permission: row.permission,
+  expiresAt: row.expiresAt,
+  user: row.user,
+});
 
-  //user atha 3andou 7a9 ya3ti access ? presentation m3teou?
-  const presentationRow = await db.query.presentations.findFirst({
-    where: { id: editAccessInsert.presentationId },
-    columns: { userId: true },
-  });
-  if (!presentationRow) {
-    throw new Error("E011: presentation doesn't exist");
-  }
-  const userOwnsPresentation: boolean = presentationRow.userId === userId;
-  if (!userOwnsPresentation) {
-    throw new Error("E012: user unauthorized to grant access");
-  }
-  const existingAccessRow = await db.query.editAccess.findFirst({
-    where: {
-      userId: userIdFromEmail,
-      presentationId: editAccessInsert.presentationId,
-    },
-    columns: { id: true },
-  });
-
-  const expiresAtValue = editAccessInsert.expiresAt || null;
-
-  let editAccessId = randomUUID();
-  if (existingAccessRow) {
-    editAccessId = existingAccessRow.id as UUID;
-    await db
-      .update(editAccess)
-      .set({ expiresAt: expiresAtValue })
-      .where(eq(editAccess.id, editAccessId));
-  } else {
-    await db.insert(editAccess).values({
-      id: editAccessId,
-      userId: userIdFromEmail,
-      presentationId: editAccessInsert.presentationId,
-      expiresAt: expiresAtValue,
-    });
-  }
-
-  return {
-    id: editAccessId,
-    userId: userIdFromEmail,
-    presentationId: editAccessInsert.presentationId,
-    expiresAt: expiresAtValue,
-  };
-};
-
-/* const getPresentationAccess = async (
+const listGrants = async (
   db: DBContext,
   requesterId: UUID,
   presentationId: UUID,
-): Promise<PresentationAccessEntry[]> => {
-  const presentationRow = await db.query.presentations.findFirst({
-    where: { id: presentationId },
-    columns: { userId: true },
+) => {
+  await requirePresentationAccess(db, {
+    userId: requesterId,
+    presentationId,
+    action: "manageAccess",
   });
 
-  if (!presentationRow) {
-    throw new Error("E013: presentation doesn't exist");
-  }
-
-  const isOwner = presentationRow.userId === requesterId;
-  if (!isOwner) {
-    const activeEditAccess = await db.query.editAccess.findFirst({
-      where: {
-        presentationId,
-        userId: requesterId,
-        OR: [
-          { expiresAt: { isNull: true } },
-          { expiresAt: { gt: new Date() } },
-        ],
-      },
-      columns: { id: true },
-    });
-
-    if (!activeEditAccess) {
-      throw new Error("E014: user unauthorized to access this presentation");
-    }
-  }
-
-  const rows: EditAccessWithUserRow[] = await db.query.editAccess.findMany({
+  const rows = await db.query.presentationAccessGrants.findMany({
     where: {
       presentationId,
       OR: [{ expiresAt: { isNull: true } }, { expiresAt: { gt: new Date() } }],
     },
     with: {
       user: {
-        columns: { username: true, email: true },
+        columns: { id: true, username: true, email: true },
       },
     },
+    orderBy: { createdAt: "desc" },
   });
 
-  return rows.map((row) => ({
-    id: row.id as UUID,
-    username: row.user?.username ?? "",
-    email: row.user?.email ?? "",
-    userId: row.userId as UUID,
-    presentationId: row.presentationId as UUID,
-    expiresAt: row.expiresAt,
-  }));
+  return rows.map(serializeGrant);
 };
 
-const removeAccess = async (
-  db: DBContext,
-  requesterId: UUID,
-  accessId: UUID,
-): Promise<{ success: boolean }> => {
-  const row = await db.query.editAccess.findFirst({
-    where: { id: accessId },
-    with: {
-      presentation: {
-        columns: { userId: true },
-      },
-    },
-  });
-
-  if (!row) {
-    throw new Error("E015: access entry doesn't exist");
-  }
-
-  if (row.presentation?.userId !== requesterId) {
-    throw new Error("E016: user unauthorized to remove access");
-  }
-
-  await db.delete(editAccess).where(eq(editAccess.id, accessId));
-
-  return { success: true };
-};
-
-const createShareLink = async (
+const grantAccess = async (
   db: DBContext,
   requesterId: UUID,
   presentationId: UUID,
-): Promise<{ shareUrl: string }> => {
-  const presentationRow = await db.query.presentations.findFirst({
-    where: { id: presentationId },
-    columns: { userId: true },
+  input: GrantInput,
+) => {
+  const authorization = await requirePresentationAccess(db, {
+    userId: requesterId,
+    presentationId,
+    action: "manageAccess",
   });
 
-  if (!presentationRow) {
-    throw new Error("E017: presentation doesn't exist");
+  const targetUser = await db.query.users.findFirst({
+    where: { email: input.email.trim().toLowerCase() },
+    columns: { id: true, username: true, email: true },
+  });
+  if (!targetUser) {
+    throw notFound("A registered user with that email was not found", "USER_NOT_FOUND");
+  }
+  if (targetUser.id === authorization.presentation.userId) {
+    throw conflict("The presentation owner already has full access", "OWNER_GRANT");
   }
 
-  const userOwnsPresentation = presentationRow.userId === requesterId;
-  if (!userOwnsPresentation) {
-    throw new Error("E018: user unauthorized to generate share link");
+  const existing = await db.query.presentationAccessGrants.findFirst({
+    where: { userId: targetUser.id, presentationId },
+    columns: { id: true },
+  });
+
+  const grantId = existing?.id ?? randomUUID();
+  if (existing) {
+    await db
+      .update(presentationAccessGrants)
+      .set({
+        permission: input.permission,
+        expiresAt: input.expiresAt,
+        updatedAt: new Date(),
+      })
+      .where(eq(presentationAccessGrants.id, grantId));
+  } else {
+    await db.insert(presentationAccessGrants).values({
+      id: grantId,
+      userId: targetUser.id,
+      presentationId,
+      permission: input.permission,
+      expiresAt: input.expiresAt,
+    });
   }
 
-  const fallbackOrigin = process.env.ALLOWED_ORIGINS?.split(",").find(Boolean);
+  return {
+    id: grantId,
+    permission: input.permission,
+    expiresAt: input.expiresAt,
+    user: targetUser,
+  };
+};
+
+const removeGrant = async (
+  db: DBContext,
+  requesterId: UUID,
+  presentationId: UUID,
+  grantId: UUID,
+): Promise<void> => {
+  await requirePresentationAccess(db, {
+    userId: requesterId,
+    presentationId,
+    action: "manageAccess",
+  });
+
+  const grant = await db.query.presentationAccessGrants.findFirst({
+    where: { id: grantId, presentationId },
+    columns: { id: true },
+  });
+  if (!grant) {
+    throw notFound("Access grant not found", "GRANT_NOT_FOUND");
+  }
+
+  await db
+    .delete(presentationAccessGrants)
+    .where(eq(presentationAccessGrants.id, grantId));
+};
+
+const getShareLinkStatus = async (
+  db: DBContext,
+  requesterId: UUID,
+  presentationId: UUID,
+) => {
+  await requirePresentationAccess(db, {
+    userId: requesterId,
+    presentationId,
+    action: "manageAccess",
+  });
+
+  const link = await db.query.presentationShareLinks.findFirst({
+    where: { presentationId },
+    columns: {
+      expiresAt: true,
+      revokedAt: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
+  const now = new Date();
+
+  return {
+    active: Boolean(
+      link &&
+        link.revokedAt === null &&
+        (link.expiresAt === null || link.expiresAt.getTime() > now.getTime()),
+    ),
+    expiresAt: link?.expiresAt ?? null,
+    createdAt: link?.createdAt ?? null,
+    updatedAt: link?.updatedAt ?? null,
+  };
+};
+
+const createOrRotateShareLink = async (
+  db: DBContext,
+  requesterId: UUID,
+  presentationId: UUID,
+  expiresAt: Date | null,
+) => {
+  await requirePresentationAccess(db, {
+    userId: requesterId,
+    presentationId,
+    action: "manageAccess",
+  });
+
+  const token = randomBytes(32).toString("base64url");
+  const tokenHash = hashShareToken(token);
+  const existing = await db.query.presentationShareLinks.findFirst({
+    where: { presentationId },
+    columns: { id: true },
+  });
+
+  if (existing) {
+    await db
+      .update(presentationShareLinks)
+      .set({ tokenHash, expiresAt, revokedAt: null, updatedAt: new Date() })
+      .where(eq(presentationShareLinks.id, existing.id));
+  } else {
+    await db.insert(presentationShareLinks).values({
+      id: randomUUID(),
+      presentationId,
+      tokenHash,
+      expiresAt,
+    });
+  }
+
+  const allowedOrigins = (process.env.ALLOWED_ORIGINS ?? "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+  const fallbackOrigin =
+    allowedOrigins.find((origin) => {
+      try {
+        return new URL(origin).port === "3000";
+      } catch {
+        return false;
+      }
+    }) ?? allowedOrigins[0];
   const frontendOrigin =
     process.env.FRONTEND_URL?.trim() ||
     process.env.APP_BASE_URL?.trim() ||
     fallbackOrigin?.trim() ||
     "http://localhost:3000";
-  const normalizedOrigin = frontendOrigin.replace(/\/$/, "");
 
   return {
-    shareUrl: `${normalizedOrigin}/shared/${presentationId}`,
+    shareUrl: `${frontendOrigin.replace(/\/$/, "")}/share#token=${token}`,
+    expiresAt,
   };
-}; */
+};
+
+const revokeShareLink = async (
+  db: DBContext,
+  requesterId: UUID,
+  presentationId: UUID,
+): Promise<void> => {
+  await requirePresentationAccess(db, {
+    userId: requesterId,
+    presentationId,
+    action: "manageAccess",
+  });
+
+  await db
+    .update(presentationShareLinks)
+    .set({ revokedAt: new Date(), updatedAt: new Date() })
+    .where(eq(presentationShareLinks.presentationId, presentationId));
+};
+
+const getPublicPresentation = async (db: DBContext, token: string) => {
+  const authorization = await requireShareLinkAccess(db, { token });
+  const slideRows = await db.query.slides.findMany({
+    where: { presentationId: authorization.presentation.id },
+    columns: { id: true, content: true, slideOrder: true },
+    orderBy: { slideOrder: "asc" },
+  });
+
+  return {
+    title: authorization.presentation.title,
+    slides: slideRows,
+  };
+};
 
 export const accessService = {
-  grantAccess: grantAccess,
-  // getPresentationAccess: getPresentationAccess,
-  // removeAccess: removeAccess,
-  // createShareLink: createShareLink,
+  listGrants,
+  grantAccess,
+  removeGrant,
+  getShareLinkStatus,
+  createOrRotateShareLink,
+  revokeShareLink,
+  getPublicPresentation,
 } as const;

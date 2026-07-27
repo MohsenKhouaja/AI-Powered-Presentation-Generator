@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Architecture review - P2M</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module">
+      import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+      mermaid.initialize({
+        startOnLoad: true,
+        theme: "neutral",
+        securityLevel: "loose",
+        flowchart: { curve: "basis", htmlLabels: true },
+      });
+    </script>
+    <style>
+      :root { color-scheme: light; }
+      html { scroll-behavior: smooth; }
+      body { letter-spacing: 0; }
+      .seam { border-style: dashed; }
+      .deep { background: #172033; color: white; border-color: #172033; }
+      .leak { color: #b91c1c; border-color: #ef4444; background: #fef2f2; }
+      .diagram { min-height: 320px; }
+      .diagram .mermaid { display: flex; align-items: center; justify-content: center; min-height: 270px; }
+      .mass-interface { background: #fee2e2; border: 2px solid #ef4444; }
+      .mass-implementation { background: #f8fafc; border: 2px solid #cbd5e1; }
+      .mass-deep { background: #172033; color: white; border: 2px solid #172033; }
+      code { overflow-wrap: anywhere; }
+      @media print {
+        .break-card { break-inside: avoid; }
+        body { background: white !important; }
+      }
+    </style>
+  </head>
+  <body class="bg-stone-50 font-sans text-slate-900 antialiased">
+    <main class="mx-auto max-w-6xl space-y-12 px-5 py-10 md:px-8 md:py-14">
+      <header class="border-b border-slate-300 pb-8">
+        <div class="flex flex-col justify-between gap-6 md:flex-row md:items-end">
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-wider text-emerald-700">Architecture review</p>
+            <h1 class="mt-2 font-serif text-4xl font-semibold text-slate-950 md:text-5xl">P2M deepening opportunities</h1>
+            <p class="mt-3 text-sm text-slate-600">11 July 2026 · npm workspaces · no CONTEXT.md · no ADRs</p>
+          </div>
+          <div class="grid grid-cols-2 gap-x-5 gap-y-3 text-xs text-slate-600 sm:grid-cols-4 md:grid-cols-2">
+            <span class="flex items-center gap-2"><i class="h-4 w-6 border border-slate-500 bg-white"></i>module</span>
+            <span class="flex items-center gap-2"><i class="h-4 w-6 border border-dashed border-slate-500 bg-white"></i>seam</span>
+            <span class="flex items-center gap-2"><i class="h-0 w-6 border-t-2 border-red-600"></i>leakage</span>
+            <span class="flex items-center gap-2"><i class="h-4 w-6 bg-slate-800"></i>deep module</span>
+          </div>
+        </div>
+      </header>
+
+      <section id="candidates" class="space-y-12">
+        <article id="slide-persistence" class="break-card overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+          <div class="border-b border-slate-200 p-6 md:p-8">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800">Strong</span>
+              <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">ports &amp; adapters</span>
+              <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">01</span>
+            </div>
+            <h2 class="mt-4 font-serif text-3xl font-semibold">Make Slide persistence one deep module</h2>
+            <div class="mt-5 grid gap-4 lg:grid-cols-[1fr_1.4fr]">
+              <div>
+                <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Files</p>
+                <div class="mt-2 space-y-1 font-mono text-xs text-slate-700">
+                  <code class="block">backend/api/slides/slides-service.ts</code>
+                  <code class="block">backend/api/presentations/presentations-service.ts</code>
+                  <code class="block">backend/database/index.ts</code>
+                </div>
+              </div>
+              <div class="grid gap-3 text-sm sm:grid-cols-2">
+                <div><b class="block text-xs uppercase tracking-wider text-red-700">Problem</b><span class="mt-1 block">MySQL metadata and Mongo content leak across the Slide seam, so create, delete, generation, and detail reads each invent cross-adapter failure behavior.</span></div>
+                <div><b class="block text-xs uppercase tracking-wider text-emerald-700">Solution</b><span class="mt-1 block">Deepen the Slide module until all assembly, ordering, replacement, compensation, and reconciliation live in its implementation.</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="grid border-b border-slate-200 lg:grid-cols-2">
+            <div class="diagram border-b border-slate-200 p-5 lg:border-b-0 lg:border-r">
+              <p class="text-xs font-bold uppercase tracking-wider text-red-700">Before · storage knowledge leaks</p>
+              <pre class="mermaid">
+flowchart TB
+  PR[Presentation module] --> SQL[(MySQL)]
+  PR --> M[(MongoDB)]
+  SR[Slide module] --> SQL
+  SR --> M
+  GEN[Generation] --> SR
+  GEN --> SQL
+  classDef leak fill:#fef2f2,stroke:#dc2626,stroke-width:2px;
+  class PR,SR,GEN leak;
+              </pre>
+            </div>
+            <div class="diagram p-5">
+              <p class="text-xs font-bold uppercase tracking-wider text-emerald-700">After · one seam owns consistency</p>
+              <pre class="mermaid">
+flowchart TB
+  C[Presentation + generation callers] --> D[Deep Slide module]
+  D --> META[Metadata adapter]
+  D --> CONTENT[Content adapter]
+  META --> SQL[(MySQL)]
+  CONTENT --> M[(MongoDB)]
+  classDef deep fill:#172033,color:#fff,stroke:#172033,stroke-width:4px;
+  class D deep;
+              </pre>
+            </div>
+          </div>
+          <div class="grid gap-5 p-6 md:grid-cols-[1.2fr_1fr] md:p-8">
+            <div>
+              <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Benefits</p>
+              <ul class="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+                <li>Locality: one failure policy</li><li>Leverage: every Slide caller</li><li>Tests hit one interface</li><li>Adapters stay internal</li>
+              </ul>
+            </div>
+            <div class="rounded border border-slate-200 bg-slate-50 p-4 text-sm"><b>Deletion test:</b> deleting the current Slide module spreads real complexity, but Presentation already bypasses its seam. Deepen the module; do not add another shallow module.</div>
+          </div>
+        </article>
+
+        <article id="presentation-permissions" class="break-card overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+          <div class="border-b border-slate-200 p-6 md:p-8">
+            <div class="flex flex-wrap items-center gap-2"><span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800">Strong</span><span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">in-process</span><span class="text-xs font-semibold uppercase tracking-wider text-slate-400">02</span></div>
+            <h2 class="mt-4 font-serif text-3xl font-semibold">Concentrate Presentation permission rules</h2>
+            <div class="mt-5 grid gap-4 lg:grid-cols-[1fr_1.4fr]">
+              <div><p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Files</p><div class="mt-2 space-y-1 font-mono text-xs text-slate-700"><code class="block">backend/api/presentations/presentations-service.ts</code><code class="block">backend/api/slides/slides-service.ts</code><code class="block">backend/api/contexts/{router,contexts-service}.ts</code><code class="block">backend/api/presentations_access/*.ts</code></div></div>
+              <div class="grid gap-3 text-sm sm:grid-cols-2"><div><b class="block text-xs uppercase tracking-wider text-red-700">Problem</b><span class="mt-1 block">Owner, active edit, and expiry rules have several implementations; Context never crosses a permission seam.</span></div><div><b class="block text-xs uppercase tracking-wider text-emerald-700">Solution</b><span class="mt-1 block">Deepen Presentation Access so every Presentation-owned module delegates permission decisions to one implementation.</span></div></div>
+            </div>
+          </div>
+          <div class="grid border-b border-slate-200 lg:grid-cols-2">
+            <div class="diagram border-b border-slate-200 p-5 lg:border-b-0 lg:border-r">
+              <p class="text-xs font-bold uppercase tracking-wider text-red-700">Before · four permission shapes</p>
+              <div class="mt-6 grid h-[250px] grid-cols-2 gap-3 text-center text-xs font-semibold">
+                <div class="leak flex flex-col justify-center rounded border p-3"><span class="uppercase tracking-wider">Presentation</span><span class="mt-2 font-normal">owner + edit lookup</span></div>
+                <div class="leak flex flex-col justify-center rounded border p-3"><span class="uppercase tracking-wider">Slide</span><span class="mt-2 font-normal">owner + edit lookup</span></div>
+                <div class="leak flex flex-col justify-center rounded border p-3"><span class="uppercase tracking-wider">Access</span><span class="mt-2 font-normal">owner lookup</span></div>
+                <div class="flex flex-col justify-center rounded border-2 border-dashed border-red-400 bg-red-50 p-3 text-red-800"><span class="uppercase tracking-wider">Context</span><span class="mt-2 font-normal">no permission check</span></div>
+              </div>
+            </div>
+            <div class="diagram p-5">
+              <p class="text-xs font-bold uppercase tracking-wider text-emerald-700">After · one permission seam</p>
+              <div class="mt-6 flex h-[250px] flex-col justify-center gap-5">
+                <div class="grid grid-cols-3 gap-2 text-center text-xs"><div class="rounded border bg-white p-3">Presentation</div><div class="rounded border bg-white p-3">Slide</div><div class="rounded border bg-white p-3">Context</div></div>
+                <div class="mx-auto h-7 border-l-2 border-dashed border-slate-500"></div>
+                <div class="deep rounded border-4 p-6 text-center"><p class="text-xs font-bold uppercase tracking-wider">Deep Presentation Access module</p><p class="mt-2 text-xs text-slate-300">ownership · active edit · expiry · grant</p></div>
+              </div>
+            </div>
+          </div>
+          <div class="grid gap-5 p-6 md:grid-cols-[1.2fr_1fr] md:p-8"><div><p class="text-xs font-bold uppercase tracking-wider text-slate-500">Benefits</p><ul class="mt-3 grid gap-2 text-sm sm:grid-cols-2"><li>Locality: rules change once</li><li>Leverage: every owned module</li><li>One permission test matrix</li><li>Context closes its leak</li></ul></div><div class="rounded border border-slate-200 bg-slate-50 p-4 text-sm"><b>Deletion test:</b> the duplicated permission helpers vanish when deleted; their implementation is shallow. Absorb that knowledge into the existing Access module.</div></div>
+        </article>
+
+        <article id="presentation-authoring" class="break-card overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+          <div class="border-b border-slate-200 p-6 md:p-8">
+            <div class="flex flex-wrap items-center gap-2"><span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800">Strong</span><span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">in-process</span><span class="text-xs font-semibold uppercase tracking-wider text-slate-400">03</span></div>
+            <h2 class="mt-4 font-serif text-3xl font-semibold">Deepen Presentation authoring state</h2>
+            <div class="mt-5 grid gap-4 lg:grid-cols-[1fr_1.4fr]">
+              <div><p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Files</p><div class="mt-2 space-y-1 font-mono text-xs text-slate-700"><code class="block">frontend/src/components/editor/useEditorState.ts</code><code class="block">frontend/src/pages/PresentationEditorPage.tsx</code><code class="block">frontend/src/components/editor/*.tsx</code></div></div>
+              <div class="grid gap-3 text-sm sm:grid-cols-2"><div><b class="block text-xs uppercase tracking-wider text-red-700">Problem</b><span class="mt-1 block">The authoring module coordinates substantial behavior but exposes about sixty queries, mutations, setters, refs, values, and event-shaped callbacks.</span></div><div><b class="block text-xs uppercase tracking-wider text-emerald-700">Solution</b><span class="mt-1 block">Keep the existing behavior together while shrinking the external seam; raw cache, timer, mutation, and draft knowledge becomes internal.</span></div></div>
+            </div>
+          </div>
+          <div class="grid border-b border-slate-200 lg:grid-cols-2">
+            <div class="diagram border-b border-slate-200 p-5 lg:border-b-0 lg:border-r">
+              <p class="text-xs font-bold uppercase tracking-wider text-red-700">Before · interface matches implementation</p>
+              <div class="mt-6 flex h-[250px] items-end justify-center gap-3">
+                <div class="w-2/5"><div class="mass-interface flex h-40 items-center justify-center rounded-t p-4 text-center text-xs font-bold uppercase tracking-wider text-red-800">~60 exposed names</div><div class="mass-implementation flex h-24 items-center justify-center rounded-b p-3 text-center text-xs">autosave · reorder · context · share · generation</div></div>
+                <div class="pb-10 text-3xl text-red-500">≈</div>
+                <div class="pb-16 text-xs font-semibold text-red-700">shallow</div>
+              </div>
+            </div>
+            <div class="diagram p-5">
+              <p class="text-xs font-bold uppercase tracking-wider text-emerald-700">After · compact interface, deep behavior</p>
+              <div class="mt-6 flex h-[250px] items-end justify-center">
+                <div class="w-3/5"><div class="flex h-12 items-center justify-center rounded-t border-2 border-emerald-600 bg-emerald-50 p-3 text-center text-xs font-bold uppercase tracking-wider text-emerald-800">Authoring interface</div><div class="mass-deep flex h-44 flex-col items-center justify-center rounded-b p-5 text-center"><span class="text-xs font-bold uppercase tracking-wider">Deep implementation</span><span class="mt-3 text-xs text-slate-300">selection · drafts · persistence · timing · Context · sharing</span></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="grid gap-5 p-6 md:grid-cols-[1.2fr_1fr] md:p-8"><div><p class="text-xs font-bold uppercase tracking-wider text-slate-500">Benefits</p><ul class="mt-3 grid gap-2 text-sm sm:grid-cols-2"><li>Locality: authoring invariants</li><li>Leverage: every editor action</li><li>Tests drive one interface</li><li>Page stops rewiring internals</li></ul></div><div class="rounded border border-slate-200 bg-slate-50 p-4 text-sm"><b>Deletion test:</b> deletion spreads real behavior into the page, so the module earns its place. Its interface, not its existence, is the shallow part.</div></div>
+        </article>
+
+        <article id="context-attachments" class="break-card overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+          <div class="border-b border-slate-200 p-6 md:p-8">
+            <div class="flex flex-wrap items-center gap-2"><span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800">Strong</span><span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">local-substitutable</span><span class="text-xs font-semibold uppercase tracking-wider text-slate-400">04</span></div>
+            <h2 class="mt-4 font-serif text-3xl font-semibold">Own the Context attachment lifecycle</h2>
+            <div class="mt-5 grid gap-4 lg:grid-cols-[1fr_1.4fr]">
+              <div><p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Files</p><div class="mt-2 space-y-1 font-mono text-xs text-slate-700"><code class="block">backend/api/contexts/router.ts</code><code class="block">backend/api/contexts/contexts-service.ts</code><code class="block">backend/api/files/files-service.ts</code><code class="block">backend/config/uploads.ts</code></div></div>
+              <div class="grid gap-3 text-sm sm:grid-cols-2"><div><b class="block text-xs uppercase tracking-wider text-red-700">Problem</b><span class="mt-1 block">Upload writes, SQL metadata, filesystem cleanup, base64 reads, and rollback ordering are split across three modules.</span></div><div><b class="block text-xs uppercase tracking-wider text-emerald-700">Solution</b><span class="mt-1 block">Absorb the shallow File module and make Context own staging, scoped attachment changes, cleanup, and read representations.</span></div></div>
+            </div>
+          </div>
+          <div class="grid border-b border-slate-200 lg:grid-cols-2">
+            <div class="diagram border-b border-slate-200 p-5 lg:border-b-0 lg:border-r"><p class="text-xs font-bold uppercase tracking-wider text-red-700">Before · commit order escapes the seam</p><pre class="mermaid">
+sequenceDiagram
+  participant R as Context route
+  participant F as Filesystem
+  participant C as Context module
+  participant S as SQL
+  R->>F: Multer writes
+  R->>C: create/update
+  C->>S: metadata transaction
+  Note over F,S: Later failure leaves one side changed
+  C->>F: delete after SQL row
+            </pre></div>
+            <div class="diagram p-5"><p class="text-xs font-bold uppercase tracking-wider text-emerald-700">After · lifecycle stays behind one seam</p><pre class="mermaid">
+sequenceDiagram
+  participant R as Context route
+  participant C as Deep Context module
+  participant S as SQL adapter
+  participant F as Filesystem adapter
+  R->>C: attachment change
+  C->>F: stage
+  C->>S: persist scoped metadata
+  C->>F: commit or compensate
+  C-->>R: complete Context result
+            </pre></div>
+          </div>
+          <div class="grid gap-5 p-6 md:grid-cols-[1.2fr_1fr] md:p-8"><div><p class="text-xs font-bold uppercase tracking-wider text-slate-500">Benefits</p><ul class="mt-3 grid gap-2 text-sm sm:grid-cols-2"><li>Locality: one attachment policy</li><li>Leverage: create and update</li><li>Temp-dir tests hit interface</li><li>Cleanup becomes verifiable</li></ul></div><div class="rounded border border-slate-200 bg-slate-50 p-4 text-sm"><b>Deletion test:</b> deleting <code>createMany</code> moves one SQL statement into Context. The File module is shallow; Context should absorb its implementation.</div></div>
+        </article>
+
+        <article id="presentation-contract" class="break-card overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+          <div class="border-b border-slate-200 p-6 md:p-8">
+            <div class="flex flex-wrap items-center gap-2"><span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800">Strong</span><span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">ports &amp; adapters</span><span class="text-xs font-semibold uppercase tracking-wider text-slate-400">05</span></div>
+            <h2 class="mt-4 font-serif text-3xl font-semibold">Deepen the Presentation HTTP contract</h2>
+            <div class="mt-5 grid gap-4 lg:grid-cols-[1fr_1.4fr]">
+              <div><p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Files</p><div class="mt-2 space-y-1 font-mono text-xs text-slate-700"><code class="block">frontend/src/hooks/useApiClient.ts</code><code class="block">frontend/src/hooks/queries/{usePresentations,useSlides,useContextsFiles}.ts*</code><code class="block">backend/api/{presentations,contexts}/*.ts</code><code class="block">docs/PRD-presentation-editor.md</code></div></div>
+              <div class="grid gap-3 text-sm sm:grid-cols-2"><div><b class="block text-xs uppercase tracking-wider text-red-700">Problem</b><span class="mt-1 block">Callers own paths, encoding, asserted response types, and cache effects; title and Context responses already disagree across the HTTP seam.</span></div><div><b class="block text-xs uppercase tracking-wider text-emerald-700">Solution</b><span class="mt-1 block">Deepen a Presentation contract module that owns encoding, response validation, and error normalization at the HTTP seam.</span></div></div>
+            </div>
+          </div>
+          <div class="grid border-b border-slate-200 lg:grid-cols-2">
+            <div class="diagram border-b border-slate-200 p-5 lg:border-b-0 lg:border-r"><p class="text-xs font-bold uppercase tracking-wider text-red-700">Before · asserted shapes disagree</p><div class="relative mx-auto mt-8 h-[240px] max-w-md"><div class="absolute left-2 top-5 h-32 w-48 rounded-full border-2 border-red-400 bg-red-50/80 p-8 text-xs font-semibold text-red-800">Frontend types<br />{ context, files }</div><div class="absolute right-2 top-5 h-32 w-48 rounded-full border-2 border-red-400 bg-red-50/80 p-8 text-right text-xs font-semibold text-red-800">Backend JSON<br />flat Context</div><div class="absolute bottom-2 left-16 h-32 w-48 rounded-full border-2 border-red-400 bg-red-50/80 p-10 text-xs font-semibold text-red-800">Title update<br />expects detail</div><div class="absolute bottom-2 right-10 h-32 w-48 rounded-full border-2 border-red-400 bg-red-50/80 p-10 text-right text-xs font-semibold text-red-800">Title update<br />returns nothing</div></div></div>
+            <div class="diagram p-5"><p class="text-xs font-bold uppercase tracking-wider text-emerald-700">After · contract owns the seam</p><div class="mt-8 flex h-[240px] flex-col items-center justify-center"><div class="flex gap-2 text-xs"><span class="rounded border bg-white p-3">Query modules</span><span class="rounded border bg-white p-3">Route adapters</span></div><div class="h-8 border-l-2 border-dashed border-slate-500"></div><div class="deep w-full max-w-md rounded border-4 p-8 text-center"><p class="text-xs font-bold uppercase tracking-wider">Deep Presentation contract module</p><p class="mt-3 text-xs text-slate-300">paths · multipart · validation · errors</p></div><div class="seam mt-4 w-3/4 border-t-2 border-slate-500 pt-2 text-center text-[10px] uppercase tracking-wider text-slate-500">HTTP seam</div></div></div>
+          </div>
+          <div class="grid gap-5 p-6 md:grid-cols-[1.2fr_1fr] md:p-8"><div><p class="text-xs font-bold uppercase tracking-wider text-slate-500">Benefits</p><ul class="mt-3 grid gap-2 text-sm sm:grid-cols-2"><li>Locality: contract changes once</li><li>Leverage: every Presentation call</li><li>HTTP fixtures test interface</li><li>Runtime drift becomes visible</li></ul></div><div class="rounded border border-slate-200 bg-slate-50 p-4 text-sm"><b>Deletion test:</b> the generic request module only moves JSON boilerplate when deleted. A deep contract module would spread paths, encoding, validation, and errors back across every caller.</div></div>
+        </article>
+
+        <article id="authentication" class="break-card overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+          <div class="border-b border-slate-200 p-6 md:p-8">
+            <div class="flex flex-wrap items-center gap-2"><span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800">Worth exploring</span><span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">in-process</span><span class="text-xs font-semibold uppercase tracking-wider text-slate-400">06</span></div>
+            <h2 class="mt-4 font-serif text-3xl font-semibold">Deepen authentication and session lifecycle</h2>
+            <div class="mt-5 grid gap-4 lg:grid-cols-[1fr_1.4fr]">
+              <div><p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Files</p><div class="mt-2 space-y-1 font-mono text-xs text-slate-700"><code class="block">backend/middleware/auth.ts</code><code class="block">backend/routes/auth.ts</code><code class="block">backend/api/{presentations,slides,presentations_access}/router.ts</code><code class="block">frontend/src/context/AuthProvider.tsx</code><code class="block">frontend/src/hooks/{useApiClient,queries/useAuthSession}.ts*</code></div></div>
+              <div class="grid gap-3 text-sm sm:grid-cols-2"><div><b class="block text-xs uppercase tracking-wider text-red-700">Problem</b><span class="mt-1 block">Token signing, verification, request identity, refresh, retry, request normalization, and session state are duplicated or exposed through shallow modules.</span></div><div><b class="block text-xs uppercase tracking-wider text-emerald-700">Solution</b><span class="mt-1 block">Deepen the existing authentication modules on each side of the HTTP seam; protected callers consume established identity and session state.</span></div></div>
+            </div>
+          </div>
+          <div class="grid border-b border-slate-200 lg:grid-cols-2">
+            <div class="diagram border-b border-slate-200 p-5 lg:border-b-0 lg:border-r"><p class="text-xs font-bold uppercase tracking-wider text-red-700">Before · thin bands repeat knowledge</p><div class="mt-7 space-y-2 text-center text-xs font-semibold"><div class="leak h-10 rounded border p-3">Session query mirrors context</div><div class="leak h-10 rounded border p-3">Request module normalizes body</div><div class="leak h-10 rounded border p-3">Provider normalizes + refreshes + retries</div><div class="leak h-10 rounded border p-3">Middleware verifies token</div><div class="grid grid-cols-3 gap-2"><div class="leak h-14 rounded border p-2">Presentation verifies again</div><div class="leak h-14 rounded border p-2">Slide verifies again</div><div class="leak h-14 rounded border p-2">Access verifies again</div></div></div></div>
+            <div class="diagram p-5"><p class="text-xs font-bold uppercase tracking-wider text-emerald-700">After · two deep modules, one HTTP seam</p><div class="mt-7 flex h-[245px] flex-col justify-center gap-3 text-center text-xs font-semibold"><div class="deep rounded border-4 p-6"><span class="uppercase tracking-wider">Deep frontend session module</span><span class="mt-2 block font-normal text-slate-300">state · refresh · retry · normalization</span></div><div class="seam border-t-2 border-slate-500 py-2 text-[10px] uppercase tracking-wider text-slate-500">HTTP seam</div><div class="deep rounded border-4 p-6"><span class="uppercase tracking-wider">Deep backend authentication module</span><span class="mt-2 block font-normal text-slate-300">sign · verify · request identity · failure semantics</span></div></div></div>
+          </div>
+          <div class="grid gap-5 p-6 md:grid-cols-[1.2fr_1fr] md:p-8"><div><p class="text-xs font-bold uppercase tracking-wider text-slate-500">Benefits</p><ul class="mt-3 grid gap-2 text-sm sm:grid-cols-2"><li>Locality: token lifecycle</li><li>Leverage: every protected call</li><li>Identity tests avoid JWT setup</li><li>Session tests cover retry</li></ul></div><div class="rounded border border-slate-200 bg-slate-50 p-4 text-sm"><b>Deletion test:</b> router token helpers and session query modules mostly vanish when deleted; the provider and middleware contain the depth worth preserving and increasing.</div></div>
+        </article>
+      </section>
+
+      <section id="top-recommendation" class="rounded-lg border-2 border-emerald-700 bg-emerald-50 p-7 md:p-9">
+        <p class="text-xs font-bold uppercase tracking-wider text-emerald-800">Top recommendation</p>
+        <h2 class="mt-3 font-serif text-3xl font-semibold text-slate-950"><a class="underline decoration-emerald-600 decoration-2 underline-offset-4" href="#slide-persistence">Make Slide persistence one deep module</a></h2>
+        <p class="mt-3 max-w-3xl text-sm text-slate-700">It has the highest leverage and the most immediate integrity risk: today a single Slide workflow can leave MySQL and MongoDB disagreeing, while Presentation callers bypass the existing seam.</p>
+      </section>
+    </main>
+  </body>
+</html>

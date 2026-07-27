@@ -1,9 +1,16 @@
 import { randomUUID } from "node:crypto";
 import type { UUID } from "node:crypto";
 import { and, eq, gt, sql } from "drizzle-orm";
+import { requirePresentationAccess } from "../../authorization/presentation-authorization.js";
 import type { DBContext } from "../../database/index.js";
 import { slides } from "../../database/drizzle/schema.js";
 import type { SlideRow } from "../../database/types.js";
+import {
+  badGateway,
+  badRequest,
+  notFound,
+  serviceUnavailable,
+} from "../../errors/http-error.js";
 import { contextService } from "../contexts/contexts-service.js";
 
 export type slideOrder = {
@@ -34,7 +41,10 @@ const extractJsonObject = (text: string): string => {
   const start = text.indexOf("{");
   const end = text.lastIndexOf("}");
   if (start === -1 || end === -1 || end <= start) {
-    throw new Error("E019: LLM response did not contain JSON object");
+    throw badGateway(
+      "Slide generation returned an invalid response",
+      "SLIDE_GENERATION_FAILED",
+    );
   }
   return text.slice(start, end + 1);
 };
@@ -47,7 +57,10 @@ const generateSlidesWithOpenRouter = async (input: {
 }): Promise<GeneratedSlide[]> => {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
-    throw new Error("E020: OpenRouter API key is not set (expected OPENROUTER_API_KEY)");
+    throw serviceUnavailable(
+      "Slide generation is unavailable",
+      "SLIDE_GENERATION_UNAVAILABLE",
+    );
   }
 
   const model = process.env.OPENROUTER_MODEL || "tencent/hy3:free";
@@ -104,40 +117,67 @@ ${slideCountRule}
 - Use concise bullets; no giant paragraphs.
 `;
 
-  const response = await fetch(OPENROUTER_CHAT_COMPLETIONS_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      temperature: 0.4,
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: user },
-      ],
-    }),
-  });
-
-  if (!response.ok) {
-    const bodyText = await response.text().catch(() => "");
-    throw new Error(
-      `OpenRouter request failed (${response.status}): ${bodyText || response.statusText}`,
+  let response: Response;
+  try {
+    response = await fetch(OPENROUTER_CHAT_COMPLETIONS_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model,
+        temperature: 0.4,
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: user },
+        ],
+      }),
+    });
+  } catch {
+    throw badGateway(
+      "Slide generation provider is unreachable",
+      "SLIDE_GENERATION_FAILED",
     );
   }
 
-  const data = (await response.json()) as {
+  if (!response.ok) {
+    throw badGateway(
+      `Slide generation provider failed with status ${response.status}`,
+      "SLIDE_GENERATION_FAILED",
+    );
+  }
+
+  let data: {
     choices?: Array<{ message?: { content?: string | null } }>;
   };
+  try {
+    data = (await response.json()) as typeof data;
+  } catch {
+    throw badGateway(
+      "Slide generation returned an invalid response",
+      "SLIDE_GENERATION_FAILED",
+    );
+  }
 
   const content = data.choices?.[0]?.message?.content ?? "";
   if (!content.trim()) {
-    throw new Error("E021: OpenRouter response was empty");
+    throw badGateway(
+      "Slide generation returned an empty response",
+      "SLIDE_GENERATION_FAILED",
+    );
   }
 
   const jsonText = extractJsonObject(content);
-  const parsed = JSON.parse(jsonText) as { slides?: GeneratedSlide[] };
+  let parsed: { slides?: GeneratedSlide[] };
+  try {
+    parsed = JSON.parse(jsonText) as { slides?: GeneratedSlide[] };
+  } catch {
+    throw badGateway(
+      "Slide generation returned invalid JSON",
+      "SLIDE_GENERATION_FAILED",
+    );
+  }
 
   const slidesArray = Array.isArray(parsed.slides) ? parsed.slides : [];
   let normalized = slidesArray
@@ -151,51 +191,13 @@ ${slideCountRule}
   }
 
   if (normalized.length === 0) {
-    throw new Error("E022: OpenRouter did not return any slides");
+    throw badGateway(
+      "Slide generation returned no usable slides",
+      "SLIDE_GENERATION_FAILED",
+    );
   }
 
   return normalized;
-};
-
-const hasActiveEditAccess = async (
-  db: DBContext,
-  presentationId: UUID,
-  userId: UUID,
-): Promise<boolean> => {
-  const activeEditAccess = await db.query.editAccess.findFirst({
-    where: {
-      presentationId,
-      userId,
-      OR: [{ expiresAt: { isNull: true } }, { expiresAt: { gt: new Date() } }],
-    },
-    columns: { id: true },
-  });
-
-  return Boolean(activeEditAccess);
-};
-
-const assertCanEditPresentation = async (
-  db: DBContext,
-  presentationId: UUID,
-  userId: UUID,
-): Promise<void> => {
-  const presentationRow = await db.query.presentations.findFirst({
-    where: { id: presentationId },
-    columns: { id: true, userId: true },
-  });
-
-  if (!presentationRow) {
-    throw new Error("E023: presentation doesn't exist");
-  }
-
-  if (presentationRow.userId === userId) {
-    return;
-  }
-
-  const canEdit = await hasActiveEditAccess(db, presentationId, userId);
-  if (!canEdit) {
-    throw new Error("E024: user unauthorized to edit this presentation");
-  }
 };
 
 const findMany = async (
@@ -203,7 +205,11 @@ const findMany = async (
   userId: UUID,
   presentationId: UUID,
 ): Promise<SlideRow[]> => {
-  await assertCanEditPresentation(db, presentationId, userId);
+  await requirePresentationAccess(db, {
+    userId,
+    presentationId,
+    action: "view",
+  });
 
   return await db.query.slides.findMany({
     where: { presentationId },
@@ -217,14 +223,18 @@ const findOne = async (
   presentationId: UUID,
   slideId: UUID,
 ): Promise<SlideRow> => {
-  await assertCanEditPresentation(db, presentationId, userId);
+  await requirePresentationAccess(db, {
+    userId,
+    presentationId,
+    action: "view",
+  });
 
   const slideRow = await db.query.slides.findFirst({
     where: { id: slideId, presentationId },
   });
 
   if (!slideRow) {
-    throw new Error("E026: slide doesn't exist");
+    throw notFound("Slide not found", "SLIDE_NOT_FOUND");
   }
 
   return slideRow;
@@ -236,7 +246,11 @@ const create = async (
   presentationId: UUID,
   input: SlideCreateInput,
 ): Promise<SlideRow> => {
-  await assertCanEditPresentation(db, presentationId, userId);
+  await requirePresentationAccess(db, {
+    userId,
+    presentationId,
+    action: "editContent",
+  });
 
   const slideId = randomUUID();
 
@@ -275,14 +289,18 @@ const update = async (
   slideId: UUID,
   content: string,
 ): Promise<SlideRow> => {
-  await assertCanEditPresentation(db, presentationId, userId);
+  await requirePresentationAccess(db, {
+    userId,
+    presentationId,
+    action: "editContent",
+  });
 
   const slideRow = await db.query.slides.findFirst({
     where: { id: slideId, presentationId },
   });
 
   if (!slideRow) {
-    throw new Error("E027: slide doesn't exist");
+    throw notFound("Slide not found", "SLIDE_NOT_FOUND");
   }
 
   await db
@@ -306,14 +324,18 @@ const removeOne = async (
   presentationId: UUID,
   slideId: UUID,
 ): Promise<{ id: UUID; deleted: true }> => {
-  await assertCanEditPresentation(db, presentationId, userId);
+  await requirePresentationAccess(db, {
+    userId,
+    presentationId,
+    action: "editContent",
+  });
 
   const slideRow = await db.query.slides.findFirst({
     where: { id: slideId, presentationId },
   });
 
   if (!slideRow) {
-    throw new Error("E028: slide doesn't exist");
+    throw notFound("Slide not found", "SLIDE_NOT_FOUND");
   }
 
   await db.transaction(async (tx) => {
@@ -338,20 +360,72 @@ const updateOrder = async (
   firstSlideOrder: slideOrder,
   secondSlideOrder: slideOrder,
 ): Promise<slideOrder[]> => {
-  await assertCanEditPresentation(db, presentationId, userId);
-  if (firstSlideOrder.length !== secondSlideOrder.length) {
-    throw new Error("E029: slide orders length mismatch");
+  await requirePresentationAccess(db, {
+    userId,
+    presentationId,
+    action: "editContent",
+  });
+  if (
+    !Array.isArray(firstSlideOrder) ||
+    !Array.isArray(secondSlideOrder) ||
+    firstSlideOrder.length === 0 ||
+    firstSlideOrder.length !== secondSlideOrder.length
+  ) {
+    throw badRequest(
+      "Slide order lists must have the same non-zero length",
+      "INVALID_SLIDE_ORDER",
+    );
   }
+  const firstIds = firstSlideOrder.map((entry) => entry?.id);
+  const secondIds = secondSlideOrder.map((entry) => entry?.id);
+  const requestedOrders = secondSlideOrder.map((entry) => entry?.order);
+  if (
+    firstIds.some((id) => typeof id !== "string") ||
+    secondIds.some((id) => typeof id !== "string") ||
+    requestedOrders.some(
+      (order) => !Number.isInteger(order) || Number(order) < 1,
+    ) ||
+    new Set(firstIds).size !== firstIds.length ||
+    new Set(secondIds).size !== secondIds.length ||
+    new Set(requestedOrders).size !== requestedOrders.length ||
+    firstIds.some((id) => !secondIds.includes(id))
+  ) {
+    throw badRequest(
+      "Slide order entries must contain the same unique IDs and orders",
+      "INVALID_SLIDE_ORDER",
+    );
+  }
+
+  const presentationSlides = await db.query.slides.findMany({
+    where: { presentationId, id: { in: firstIds } },
+    columns: { id: true },
+  });
+  if (presentationSlides.length !== firstIds.length) {
+    throw notFound("Slide not found", "SLIDE_NOT_FOUND");
+  }
+
   await db.transaction(async (tx) => {
-    for (let i = 0; i < firstSlideOrder.length; i++) {
-      const firstSlide = firstSlideOrder[i];
-      const secondSlide = secondSlideOrder[i];
-      if (firstSlide.id !== secondSlide.id) {
-        await tx
-          .update(slides)
-          .set({ slideOrder: secondSlide.order })
-          .where(eq(slides.id, firstSlide.id));
-      }
+    for (let index = 0; index < firstIds.length; index++) {
+      await tx
+        .update(slides)
+        .set({ slideOrder: -(index + 1) })
+        .where(
+          and(
+            eq(slides.id, firstIds[index]),
+            eq(slides.presentationId, presentationId),
+          ),
+        );
+    }
+    for (const entry of secondSlideOrder) {
+      await tx
+        .update(slides)
+        .set({ slideOrder: entry.order })
+        .where(
+          and(
+            eq(slides.id, entry.id),
+            eq(slides.presentationId, presentationId),
+          ),
+        );
     }
   });
   return [secondSlideOrder];
@@ -364,7 +438,11 @@ const generateFromContext = async (
   contextId: UUID,
   numSlides?: number,
 ): Promise<SlideRow[]> => {
-  await assertCanEditPresentation(db, presentationId, userId);
+  await requirePresentationAccess(db, {
+    userId,
+    presentationId,
+    action: "editContent",
+  });
 
   const presentationRow = await db.query.presentations.findFirst({
     where: { id: presentationId },
@@ -372,23 +450,26 @@ const generateFromContext = async (
   });
 
   if (!presentationRow) {
-    throw new Error("E030: presentation doesn't exist");
+    throw notFound();
   }
 
-  const contextRow = await contextService.findOne(db, contextId);
+  const contextRow = await contextService.findOne(db, userId, contextId);
   if (!contextRow) {
-    throw new Error("E031: context doesn't exist");
+    throw notFound("Context not found", "CONTEXT_NOT_FOUND");
   }
 
   if (contextRow.presentationId !== presentationId) {
-    throw new Error("E032: context does not belong to this presentation");
+    throw notFound("Context not found", "CONTEXT_NOT_FOUND");
   }
 
   const contextPrompt = contextRow.prompt ?? "";
   const contextFiles = Array.isArray(contextRow.files) ? contextRow.files : [];
 
   if (!contextPrompt.trim() && contextFiles.length === 0) {
-    throw new Error("E033: presentation context is empty");
+    throw badRequest(
+      "Presentation context is empty",
+      "PRESENTATION_CONTEXT_EMPTY",
+    );
   }
 
   const generated = await generateSlidesWithOpenRouter({
@@ -432,7 +513,11 @@ const removeAllByPresentation = async (
   userId: UUID,
   presentationId: UUID,
 ) => {
-  await assertCanEditPresentation(db, presentationId, userId);
+  await requirePresentationAccess(db, {
+    userId,
+    presentationId,
+    action: "editContent",
+  });
   await db.delete(slides).where(eq(slides.presentationId, presentationId));
 };
 

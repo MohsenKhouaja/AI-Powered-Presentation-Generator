@@ -15,9 +15,12 @@
   },
   "include": [
     "app.ts",
+    "create-app.ts",
+    "authorization/**/*.ts",
     "api/**/*.ts",
     "config/**/*.ts",
     "database/**/*.ts",
+    "errors/**/*.ts",
     "middleware/**/*.ts",
     "routes/**/*.ts"
   ]

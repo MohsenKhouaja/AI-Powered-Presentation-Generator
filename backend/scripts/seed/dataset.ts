@@ -248,22 +248,25 @@ export const SEED_PRESENTATIONS: SeedPresentation[] = [
   },
 ];
 
-// ─── Edit Access (Shared Presentations) ───────────────────────────────────────
+// ─── Access Grants (Shared Presentations) ────────────────────────────────────
 
-export type SeedEditAccess = {
+export type SeedAccessGrant = {
   /** Presentation key from SEED_PRESENTATIONS. */
   presentationKey: string;
   /** Email of the user being granted access. */
   email: string;
+  permission: "viewer" | "editor";
 };
 
-export const SEED_EDIT_ACCESS: SeedEditAccess[] = [
+export const SEED_ACCESS_GRANTS: SeedAccessGrant[] = [
   {
     presentationKey: "web-performance",
     email: "mohsen.khouaja@supcom.tn",
+    permission: "editor",
   },
   {
     presentationKey: "product-design",
     email: "mohsen.khouaja@supcom.tn",
+    permission: "editor",
   },
 ];

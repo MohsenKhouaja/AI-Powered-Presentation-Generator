@@ -184,7 +184,7 @@ Express 5 API Server
   |-- Auth Middleware   (JWT verification)  [all protected routes]
   |-- API Router        (/api/*)
        |-- presentations-service  <---> MySQL  (Drizzle ORM)
-       |-- slides-service         <---> MySQL + MongoDB + Groq API
+       |-- slides-service         <---> MySQL + Groq API
        |-- contexts-service       <---> MySQL + disk (multer)
        |-- users-service          <---> MySQL
        |-- files-service          <---> disk
@@ -206,7 +206,6 @@ Framework      & Express 5           & Minimal middleware model; NestJS overhead
 Language       & TypeScript 5.9      & Compile-time type safety, editor intelligence \\
 Dev Runner     & tsx                 & Zero-config TypeScript execution, no build step during dev \\
 MySQL ORM      & Drizzle ORM         & Lightweight, SQL-like syntax, excellent TS inference \\
-MongoDB        & Native Driver       & Direct control; no ODM overhead for simple document CRUD \\
 Auth           & jsonwebtoken        & Industry-standard JWT; symmetric RS256 \\
 File Uploads   & multer              & De facto standard for multipart/form-data in Express \\
 AI             & Groq API            & Fast inference ($\sim$500 tok/s), generous free tier \\
@@ -240,7 +239,8 @@ Animation      & Motion (Framer v12)   & Layout animations for drag-to-reorder \
 
 \subsection{Database Architecture}
 
-The data model spans two database systems, each used for what it does well.
+The data model is stored in MySQL so related presentation and slide changes can
+commit atomically.
 
 \subsubsection{MySQL --- Relational Data}
 
@@ -249,28 +249,19 @@ Six tables with foreign key constraints and cascading deletes:
 \begin{lstlisting}[language={}, title={MySQL schema (abbreviated)}]
 users            id (UUID PK), username, email, password (scrypt)
 presentations    id, title, user_id (FK -> users), created_at
-slides           id (UUID PK = MongoDB _id), presentation_id (FK), slide_order
+slides           id (UUID PK), presentation_id (FK), content (Markdown), slide_order
 contexts         id, prompt, presentation_id (FK, UNIQUE)  -- one-to-one
 files            id, context_id (FK), file_name, mime_type, size_bytes
 edit_access      id, user_id (FK), presentation_id (FK), expires_at (nullable)
 \end{lstlisting}
 
-All primary keys are UUIDs. This prevents sequential ID enumeration in URLs and enables distributed ID generation without coordination. There is also a subtler benefit: the \texttt{slides.id} UUID is shared with the MongoDB document \texttt{\_id}, creating a cross-database reference with no foreign key required.
+All primary keys are UUIDs. This prevents sequential ID enumeration in URLs and enables distributed ID generation without coordination.
 
 Cascading deletes handle cleanup automatically. Remove a presentation, and the database takes care of its slides, context, files, and access records. No multi-step application logic, no risk of orphaned rows.
 
-\subsubsection{MongoDB --- Document Storage}
-
-A single \texttt{slides\_content} collection:
-
-\begin{lstlisting}[language={}]
-{ _id: string,        // matches MySQL slides.id
-  slide_content: string }  // raw Markdown body
-\end{lstlisting}
-
-The decision to separate slide content into MongoDB is practical. Markdown length varies unpredictably, writes are frequent and append-heavy, and content is always fetched by ID with no relational join needed. MongoDB handles all of that naturally. Avoiding a VARCHAR limit is a minor bonus.
-
-The tradeoff is real, though. There is no database-enforced referential integrity across the two systems --- a MySQL row can exist without its MongoDB counterpart, and vice versa. The application wraps cross-database operations in sequences to manage this, but a production deployment would need reconciliation logic to survive partial writes or mid-operation crashes.
+Slide Markdown uses MySQL's \texttt{TEXT} type. Keeping it on the slide row gives
+the application database-enforced referential integrity and allows create,
+delete, and deck-replacement workflows to use ordinary MySQL transactions.
 
 \subsection{Authentication Design}
 
@@ -323,7 +314,7 @@ This is the feature the platform is built around. Everything else --- the editor
   \item \textbf{Build the system prompt.} A structured instruction that tells the model to produce slides with a heading, bullet points or paragraphs, and fenced code blocks where appropriate, formatted as JSON.
 \item \textbf{Send to Groq API.} A single \texttt{fetch()} call to \texttt{/v1/chat/completions} using the \texttt{llama-3.1-}\allowbreak\texttt{70b-versatile} model.
   \item \textbf{Parse and validate.} Expects \texttt{\{"slides": [\{"markdown": "..."\}]\}}. If the response is not valid JSON or the schema is wrong, an error is thrown.
-  \item \textbf{Atomic replacement.} Within a MySQL transaction: delete all existing slide rows, delete the corresponding MongoDB documents, insert the new slides with sequential \texttt{slide\_order} values, insert matching MongoDB documents.
+  \item \textbf{Atomic replacement.} Within a MySQL transaction, delete all existing slide rows and insert the generated slides, including their Markdown content, with sequential \texttt{slide\_order} values.
 \end{enumerate}
 
 The model runs at \texttt{temperature: 0.7} with \texttt{max\_tokens: 4096} --- enough headroom for a full deck, constrained enough to stay coherent. If the response comes back malformed, the error propagates to the global handler and surfaces as a toast on the frontend. No silent failures.
@@ -342,7 +333,7 @@ The \texttt{Presentation}\allowbreak\texttt{EditorPage} is the most complex comp
 
 \textbf{Context Panel} --- A collapsible side panel where the AI prompt lives. It holds a textarea, a drag-and-drop file upload zone, a deletable list of uploaded files, and the Generate button. The upload route (\texttt{POST} or \texttt{PUT /contexts/:id}) depends on whether a context already exists for this presentation.
 
-\textbf{Editor / Preview Split} --- The main work area. A resizable split pane puts the Markdown textarea on the left and a live \texttt{react-markdown} preview on the right. Auto-save runs on a 1.2-second debounce --- each keystroke schedules a \texttt{PUT} to MongoDB, which on success invalidates the cache and flips the indicator to "Saved".
+\textbf{Editor / Preview Split} --- The main work area. A resizable split pane puts the Markdown textarea on the left and a live \texttt{react-markdown} preview on the right. Auto-save runs on a 1.2-second debounce --- each keystroke schedules a \texttt{PUT} that persists the content in MySQL, invalidates the cache on success, and flips the indicator to "Saved".
 
 \textbf{Theme Selector and Share Dialog} --- A dropdown lists all 25 themes; selecting one sets a \texttt{data-theme} attribute on the preview container. A modal dialog accepts an email address to grant edit access, calling \texttt{POST /presentations/:id/access}.
 
@@ -355,7 +346,7 @@ The practical benefit is zero coupling. Adding a new theme means writing one CSS
 
 \subsection{Infrastructure and Development Workflow}
 
-Getting the environment running takes one command: \texttt{docker compose up} starts MongoDB. MySQL runs externally. Drizzle Kit handles migrations (\texttt{db:generate} to diff the schema, \texttt{db:migrate} to apply). Files are stored on disk with UUID-based names via multer and base64-encoded at generation time, capped at 50\,KB per file to stay within token limits. A seed script (\texttt{tsx scripts/seed.ts}) fills the database with three users, a handful of presentations, and cross-user access grants. The \texttt{--reset} flag tears it all down in dependency order.
+MySQL runs externally, while \texttt{docker compose up} starts the local observability services. Drizzle Kit handles migrations (\texttt{db:generate} to diff the schema, \texttt{db:migrate} to apply). Files are stored on disk with UUID-based names via multer and base64-encoded at generation time, capped at 50\,KB per file to stay within token limits. A seed script (\texttt{tsx scripts/seed.ts}) fills the database with three users, a handful of presentations, and cross-user access grants. The \texttt{--reset} flag tears it all down in dependency order.
 
 %% ─── SECTION 4 ───────────────────────────────────────────────────────────────
 \section{Results and Conclusion}
@@ -376,7 +367,6 @@ Frontend pages         & 8 \\
 UI components (shadcn) & 53 \\
 Visual themes          & 25 CSS files \\
 MySQL tables           & 6 \\
-MongoDB collections    & 1 (\texttt{slides\_content}) \\
 AI model               & \texttt{llama-3.1-70b-versatile} via Groq \\
 Auth tokens            & 2 (access: 15 min, refresh: 30 days) \\
 Backend packages       & $\sim$30 npm dependencies \\
@@ -393,7 +383,9 @@ Frontend packages      & $\sim$70 npm dependencies \\
 
 \textbf{What Worked Well}\par
 
-The dual-database approach held up. MySQL does what relational databases are good at --- integrity constraints, cascading operations, structured queries. MongoDB absorbs slide content without any schema friction. The shared UUID linking the two is simple, obvious, and has caused no operational issues.
+Keeping slide metadata and Markdown together in MySQL makes integrity constraints,
+cascading deletes, structured queries, and atomic deck replacement available
+without cross-database coordination.
 
 The theming architecture was one of the better early decisions. Pure CSS, zero JavaScript, completely isolated from component logic. A designer can ship a new theme without reading a single line of application code. That kind of separation pays dividends throughout development.
 
@@ -405,7 +397,7 @@ React Query for server state and React Context for auth and UI concerns give the
 \begin{itemize}[topsep=3pt, noitemsep]
   \item \textbf{ESM import friction.} Node.js ESM requires \texttt{.js} extensions on all relative TypeScript imports. It is technically correct but deeply counterintuitive, and it caused recurring errors. Document it from day one.
   \item \textbf{LLM output is not always well-formed.} The pipeline assumes valid JSON. In practice, models occasionally produce malformed output near token limits --- a retry mechanism and a fallback extraction strategy should be added.
-  \item \textbf{Cross-database sequencing.} No transaction spans both MySQL and MongoDB. A crash between the two writes leaves the data inconsistent. Compensating logic or a periodic reconciliation job would be needed in production.
+  \item \textbf{Persistence locality.} Data that must change together should live in the same transactional store; splitting slide metadata and content created avoidable partial-write failure modes.
   \item \textbf{Monorepo complexity grows.} TypeScript path resolution and type sharing get harder as the project scales. Keeping types inline was pragmatic for now, but will need revisiting.
 \end{itemize}
 
@@ -421,6 +413,10 @@ React Query for server state and React Context for auth and UI concerns give the
 
 P2M does what it set out to do. Writing a presentation in Markdown is faster and less frustrating than fighting a visual editor, especially for decks with substantial content. The AI generation feature --- a plain-language prompt returning a structured slide deck in under 15 seconds --- is the kind of gain that is difficult to give up once you have used it.
 
-The architecture is sound. The technology choices fit the scale, the dual-database split works cleanly in practice, and the theming system is one of the more satisfying design decisions in the codebase. The remaining gaps are real --- testing, request validation, typed errors --- but none of them require structural changes to fix. The foundation is there.
+The architecture is sound. The technology choices fit the scale, keeping each
+slide in one transactional store simplifies persistence, and the theming system
+is one of the more satisfying design decisions in the codebase. The remaining
+gaps are real --- testing, request validation, typed errors --- but none of them
+require structural changes to fix. The foundation is there.
 
 \end{document}

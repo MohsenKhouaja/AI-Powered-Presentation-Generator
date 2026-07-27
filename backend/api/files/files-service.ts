@@ -1,29 +1,49 @@
-import * as fs from "fs/promises";
-import type { UUID } from "node:crypto";
+import * as fs from "node:fs/promises";
+import path from "node:path";
+import { and, eq, inArray } from "drizzle-orm";
 import type { DBContext } from "../../database/index.js";
 import { files as filesTable } from "../../database/drizzle/schema.js";
-import { inArray } from "drizzle-orm";
-import path from "node:path";
+import type { NewFileRow } from "../../database/types.js";
 import { UPLOAD_PATH } from "../../config/uploads.js";
-import type { FileRow, NewFileRow } from "../../database/types.js";
 
 const createMany = async (db: DBContext, files: NewFileRow[]) => {
+  if (files.length === 0) return [];
   await db.insert(filesTable).values(files);
+  return files;
 };
 
-const deleteMany = async (db: DBContext, fileNames: string[]) => {
-  if (fileNames.length === 0) return;
+const deleteManyByIds = async (
+  db: DBContext,
+  contextId: string,
+  fileIds: string[],
+) => {
+  if (fileIds.length === 0) return [];
 
-  await db.delete(filesTable).where(inArray(filesTable.fileName, fileNames));
+  const rows = await db.query.files.findMany({
+    where: { contextId, id: { in: fileIds } },
+    columns: { id: true, fileName: true },
+  });
+  if (rows.length === 0) return [];
 
-  await Promise.all(
-    fileNames.map((fileName) =>
-      fs.rm(path.join(UPLOAD_PATH, fileName), { force: true, recursive: true }),
+  await db.delete(filesTable).where(
+    and(
+      eq(filesTable.contextId, contextId),
+      inArray(
+        filesTable.id,
+        rows.map((row) => row.id),
+      ),
     ),
   );
+
+  await Promise.all(
+    rows.map((row) =>
+      fs.rm(path.join(UPLOAD_PATH, row.fileName), { force: true }),
+    ),
+  );
+  return rows.map((row) => row.id);
 };
 
 export const fileService = {
-  createMany: createMany,
-  deleteMany: deleteMany,
-};
+  createMany,
+  deleteManyByIds,
+} as const;

@@ -89,6 +89,7 @@ export const logger = pino(
     redact: {
       paths: [
         "req.headers.authorization",
+        'req.headers["x-share-token"]',
         "req.headers.cookie",
         'res.headers["set-cookie"]',
         "body.password",
@@ -205,8 +206,9 @@ export const httpLogger = pinoHttp<Request, Response>({
     return req.authenticatedUserId ? { userId: req.authenticatedUserId } : {};
   },
   customLogLevel(_req, res, error) {
-    if (error || res.statusCode >= 500) return "error";
+    if (res.statusCode >= 500) return "error";
     if (res.statusCode >= 400) return "warn";
+    if (error) return "error";
     return "info";
   },
   customSuccessMessage(req, res) {

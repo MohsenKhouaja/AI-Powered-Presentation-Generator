@@ -1,100 +1,29 @@
-import express, {
-  type NextFunction,
-  type Request,
-  type Response,
-} from "express";
 import { mkdirSync } from "node:fs";
-import path from "node:path";
-import cors, { type CorsOptions } from "cors";
 import dotenv from "dotenv";
-import authMiddleware from "./middleware/auth.js";
-import cookieParser from "cookie-parser";
-import { apiRouter } from "./api/router.js";
-import authRouter from "./routes/auth.js";
 import { UPLOAD_PATH } from "./config/uploads.js";
-import { httpLogger, logger } from "./config/logger.js";
+import { logger } from "./config/logger.js";
+import { createApp } from "./create-app.js";
 import { registerGracefulShutdown } from "./shutdown.js";
 
 dotenv.config({ quiet: true });
 
 const missingEnvVars = [];
-if (!process.env.JWT_ACCESS_TOKEN_SECRET_KEY) missingEnvVars.push("JWT_ACCESS_TOKEN_SECRET_KEY");
-if (!process.env.JWT_REFRESH_TOKEN_SECRET_KEY) missingEnvVars.push("JWT_REFRESH_TOKEN_SECRET_KEY");
+if (!process.env.JWT_ACCESS_TOKEN_SECRET_KEY) {
+  missingEnvVars.push("JWT_ACCESS_TOKEN_SECRET_KEY");
+}
+if (!process.env.JWT_REFRESH_TOKEN_SECRET_KEY) {
+  missingEnvVars.push("JWT_REFRESH_TOKEN_SECRET_KEY");
+}
 if (missingEnvVars.length > 0) {
   throw new Error(`Missing required env var(s): ${missingEnvVars.join(", ")}`);
 }
 
 mkdirSync(UPLOAD_PATH, { recursive: true });
 
-const app = express();
-const PORT = process.env.PORT || 3001;
-
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
-  .split(",")
-  .map((origin) => origin.trim())
-  .filter(Boolean);
-
-const corsOptions: CorsOptions = {
-  credentials: true,
-  origin: (origin, callback) => {
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) return callback(null, true);
-    return callback(new Error("E041: Not allowed by CORS"));
-  },
-};
-
-// Middleware
-app.use(httpLogger);
-app.use(cors(corsOptions));
-app.use(cookieParser());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-app.use("/api/auth", authRouter);
-
-// Routes
-app.use("/api", authMiddleware, apiRouter);
-
-// Health check
-app.get("/health", (req, res) => {
-  res.json({ status: "ok", timestamp: new Date().toISOString() });
-});
-
-// Error handler
-app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
-  const status =
-    typeof (err as { status?: unknown })?.status === "number"
-      ? (err as { status: number }).status
-      : typeof (err as { statusCode?: unknown })?.statusCode === "number"
-        ? (err as { statusCode: number }).statusCode
-        : 500;
-
-  const errorMessage =
-    err instanceof Error && err.message
-      ? err.message
-      : typeof (err as { message?: unknown })?.message === "string"
-        ? (err as { message: string }).message
-        : "An unexpected error occurred";
-
-  res.err = err instanceof Error ? err : new Error(errorMessage);
-
-  const safeMessage =
-    status === 500
-      ? process.env.NODE_ENV !== "production"
-        ? errorMessage
-        : "Internal server error"
-      : errorMessage;
-
-  res.status(status).json({ error: safeMessage });
-});
-
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({ error: "Route not found" });
-});
-
-const server = app.listen(PORT, () => {
-  logger.info({ port: PORT }, "HTTP server started");
+const app = createApp();
+const port = process.env.PORT || 3001;
+const server = app.listen(port, () => {
+  logger.info({ port }, "HTTP server started");
 });
 
 registerGracefulShutdown(server);

@@ -8,15 +8,15 @@ import path from "node:path";
 import { db } from "../../database/index.js";
 import {
   contexts,
-  editAccess,
   files as filesTable,
+  presentationAccessGrants,
   presentations,
   slides,
   users,
 } from "../../database/drizzle/schema.js";
 import { UPLOAD_PATH } from "../../config/uploads.js";
 
-import { SEED_EDIT_ACCESS, SEED_PRESENTATIONS, SEED_USERS } from "./dataset.js";
+import { SEED_ACCESS_GRANTS, SEED_PRESENTATIONS, SEED_USERS } from "./dataset.js";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -149,16 +149,16 @@ export const runSeed = async (): Promise<SeedResult> => {
     }
   }
 
-  // ── 3. Insert edit access (shared presentations) ─────────────────────────
+  // ── 3. Insert access grants (shared presentations) ───────────────────────
 
-  for (const seedAccess of SEED_EDIT_ACCESS) {
+  for (const seedAccess of SEED_ACCESS_GRANTS) {
     const presEntry = seededPresentations.find(
       (p) => p.key === seedAccess.presentationKey,
     );
 
     if (!presEntry) {
       throw new Error(
-        `Seed dataset error: presentation key "${seedAccess.presentationKey}" not found for editAccess.`,
+        `Seed dataset error: presentation key "${seedAccess.presentationKey}" not found for an access grant.`,
       );
     }
 
@@ -168,14 +168,15 @@ export const runSeed = async (): Promise<SeedResult> => {
 
     if (!targetUser) {
       throw new Error(
-        `Seed dataset error: user email "${seedAccess.email}" not found for editAccess.`,
+        `Seed dataset error: user email "${seedAccess.email}" not found for an access grant.`,
       );
     }
 
-    await db.insert(editAccess).values({
+    await db.insert(presentationAccessGrants).values({
       id: randomUUID() as UUID,
       userId: targetUser.id,
       presentationId: presEntry.id,
+      permission: seedAccess.permission,
     });
   }
 

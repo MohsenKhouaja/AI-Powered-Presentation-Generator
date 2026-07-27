@@ -1,20 +1,21 @@
-import { Router } from "express";
-import { contextService } from "./contexts-service.js";
-import { db } from "../../database/index.js";
 import path from "node:path";
+import { randomUUID } from "node:crypto";
+import type { UUID } from "node:crypto";
+import { Router } from "express";
 import multer from "multer";
 import { UPLOAD_PATH } from "../../config/uploads.js";
-import { randomUUID } from "node:crypto";
+import { db } from "../../database/index.js";
 import type { uploadedFile } from "../../database/types.js";
-import type { UUID } from "node:crypto";
+import { badRequest } from "../../errors/http-error.js";
+import { contextService } from "./contexts-service.js";
 
 export const contextsRouter = Router();
+
 const upload = multer({
   storage: multer.diskStorage({
     destination: UPLOAD_PATH,
     filename: (_req, file, callback) => {
-      const fileExt = path.extname(file.originalname);
-      callback(null, `${randomUUID()}${fileExt}`);
+      callback(null, `${randomUUID()}${path.extname(file.originalname)}`);
     },
   }),
   limits: {
@@ -27,66 +28,71 @@ const upload = multer({
 
 const serializeFilesForInsert = (
   files: Express.Multer.File[],
-): uploadedFile[] => {
-  return files.map((file): uploadedFile => {
-    return {
-      fileName: file.filename,
-      mimeType: file.mimetype,
-      sizeBytes: file.size,
-      originalName: file.originalname,
-    };
-  });
+): uploadedFile[] =>
+  files.map((file) => ({
+    fileName: file.filename,
+    mimeType: file.mimetype,
+    sizeBytes: file.size,
+    originalName: file.originalname,
+  }));
+
+const parseDeletedFileIds = (value: unknown): string[] => {
+  if (value === undefined || value === null || value === "") return [];
+  const parsed =
+    typeof value === "string"
+      ? (() => {
+          try {
+            return JSON.parse(value) as unknown;
+          } catch {
+            throw badRequest(
+              "deletedFileIds must be a JSON array",
+              "INVALID_DELETED_FILE_IDS",
+            );
+          }
+        })()
+      : value;
+
+  if (!Array.isArray(parsed) || !parsed.every((id) => typeof id === "string")) {
+    throw badRequest(
+      "deletedFileIds must be a JSON array of file IDs",
+      "INVALID_DELETED_FILE_IDS",
+    );
+  }
+  return parsed;
 };
 
 contextsRouter.get("/contexts/:id", async (req, res) => {
-  const contextId = req.params.id as unknown as UUID;
-  const context = await contextService.findOne(db, contextId);
-  res.json(context);
-});
-
-contextsRouter.post(
-  "/contexts",
-  upload.array("files", 50),
-  async (req, res) => {
-    const prompt = req.body?.prompt ?? null;
-    const presentationId = req.body?.presentationId ?? null;
-    if (!prompt || !presentationId) {
-      throw new Error("E003: prompt and presentationId are required");
-    }
-    const newFiles = serializeFilesForInsert(
-      req.files as Express.Multer.File[],
-    );
-    const createdContext = await contextService.create(
+  res.json(
+    await contextService.findOne(
       db,
-      { prompt, presentationId },
-      newFiles,
-    );
-    res.status(201).json(createdContext);
-  },
-);
+      req.authenticatedUserId as UUID,
+      req.params.id as UUID,
+    ),
+  );
+});
 
 contextsRouter.put(
   "/contexts/:id",
+  async (req, _res, next) => {
+    await contextService.requireContextAccess(
+      db,
+      req.authenticatedUserId as UUID,
+      req.params.id as UUID,
+      "editContent",
+    );
+    next();
+  },
   upload.array("files", 50),
   async (req, res) => {
-    const contextId = req.params.id as string;
-    const prompt = (req.body?.prompt ?? "") as string;
-    const deletedFilesNames = Array.isArray(req.body?.deletedFilesNames)
-      ? req.body.deletedFilesNames
-      : [];
-    const newFiles = serializeFilesForInsert(
-      (req.files ?? []) as Express.Multer.File[],
-    );
-    const updatedContext = await contextService.update(
+    const prompt = typeof req.body?.prompt === "string" ? req.body.prompt : "";
+    const result = await contextService.update(
       db,
-      {
-        id: contextId,
-        prompt,
-      },
-      newFiles,
-      deletedFilesNames as string[],
+      req.authenticatedUserId as UUID,
+      req.params.id as UUID,
+      prompt,
+      serializeFilesForInsert((req.files ?? []) as Express.Multer.File[]),
+      parseDeletedFileIds(req.body?.deletedFileIds),
     );
-
-    res.json(updatedContext);
+    res.json(result);
   },
 );

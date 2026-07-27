@@ -1,122 +1,155 @@
+import fs from "node:fs/promises";
+import path from "node:path";
 import { randomUUID } from "node:crypto";
 import type { UUID } from "node:crypto";
-import { fileService } from "../files/files-service.js";
+import { eq } from "drizzle-orm";
+import { requirePresentationAccess } from "../../authorization/presentation-authorization.js";
+import { UPLOAD_PATH } from "../../config/uploads.js";
 import type { DBContext } from "../../database/index.js";
 import { contexts } from "../../database/drizzle/schema.js";
-import { eq } from "drizzle-orm";
-import fs from "fs/promises";
-import { UPLOAD_PATH } from "../../config/uploads.js";
-import path from "node:path";
 import type {
   ContextRow,
-  contextUpdate,
   ContextWithFilesRow,
   NewContextRow,
   NewFileRow,
   uploadedFile,
 } from "../../database/types.js";
+import { HttpError, notFound } from "../../errors/http-error.js";
+import { fileService } from "../files/files-service.js";
+
+const loadContext = async (db: DBContext, contextId: UUID) => {
+  const context = await db.query.contexts.findFirst({
+    where: { id: contextId },
+    with: { files: true },
+  });
+  if (!context) {
+    throw notFound("Context not found", "CONTEXT_NOT_FOUND");
+  }
+  return context;
+};
+
+const requireContextAccess = async (
+  db: DBContext,
+  userId: UUID,
+  contextId: UUID,
+  action: "viewSources" | "editContent",
+) => {
+  const context = await db.query.contexts.findFirst({
+    where: { id: contextId },
+    columns: { presentationId: true },
+  });
+  if (!context) {
+    throw notFound("Context not found", "CONTEXT_NOT_FOUND");
+  }
+
+  try {
+    await requirePresentationAccess(db, {
+      userId,
+      presentationId: context.presentationId as UUID,
+      action,
+    });
+  } catch (error) {
+    if (error instanceof HttpError && error.status === 404) {
+      throw notFound("Context not found", "CONTEXT_NOT_FOUND");
+    }
+    throw error;
+  }
+  return context;
+};
 
 const findOne = async (
   db: DBContext,
+  userId: UUID,
   contextId: UUID,
 ): Promise<ContextWithFilesRow> => {
-  const context = await db.query.contexts.findFirst({
-    where: { id: contextId },
-    with: {
-      files: true,
-    },
-  });
-  if (!context) {
-    throw new Error("E001: context doesn't exist");
-  }
+  await requireContextAccess(db, userId, contextId, "viewSources");
+  const context = await loadContext(db, contextId);
   const files = await Promise.all(
-    context.files.map(async (file) => {
-      return {
-        ...file,
-        base64File: await fs.readFile(path.join(UPLOAD_PATH, file.fileName), {
-          encoding: "base64",
-        }),
-      };
-    }),
+    context.files.map(async (file) => ({
+      ...file,
+      base64File: await fs.readFile(path.join(UPLOAD_PATH, file.fileName), {
+        encoding: "base64",
+      }),
+    })),
   );
-  const contextWithfiles = {
+
+  return {
     id: context.id,
     prompt: context.prompt,
     presentationId: context.presentationId,
-    files: files,
+    files,
   };
-  return contextWithfiles;
 };
 
-const create = async (
+const createForPresentation = async (
   db: DBContext,
   context: NewContextRow,
   files: uploadedFile[],
 ): Promise<ContextRow> => {
-  const contextId = randomUUID() as string;
-  return await db.transaction(async (tx) => {
-    if (context.prompt === undefined) {
-      throw new Error("E002: Prompt is required");
-    }
-    await tx.insert(contexts).values({
-      id: contextId,
-      prompt: context.prompt,
-      presentationId: context.presentationId,
-    });
-    const createdFiles = files.map(
-      (file): NewFileRow => ({
-        ...file,
-        contextId,
-      }),
-    );
-    const createdFileRows =
-      createdFiles.length > 0
-        ? await fileService.createMany(tx, createdFiles)
-        : [];
-    return {
-      id: contextId,
-      prompt: context.prompt,
-      presentationId: context.presentationId,
-      files: createdFileRows,
-    };
+  const contextId = randomUUID();
+  await db.insert(contexts).values({
+    id: contextId,
+    prompt: context.prompt ?? "",
+    presentationId: context.presentationId,
   });
+
+  const createdFiles: NewFileRow[] = files.map((file) => ({
+    ...file,
+    contextId,
+  }));
+  await fileService.createMany(db, createdFiles);
+
+  return {
+    id: contextId,
+    prompt: context.prompt ?? "",
+    presentationId: context.presentationId,
+  };
 };
 
 const update = async (
   db: DBContext,
-  contextUpdate: contextUpdate,
+  userId: UUID,
+  contextId: UUID,
+  prompt: string,
   newFiles: uploadedFile[],
-  deletedFilesNames: string[],
+  deletedFileIds: string[],
 ) => {
-  const doesContextExist = await db.query.contexts.findFirst({
-    where: { id: contextUpdate.id },
-  });
-  if (!doesContextExist) {
-    throw new Error("E00-1: context doesn't exist");
-  }
+  const contextAccess = await requireContextAccess(
+    db,
+    userId,
+    contextId,
+    "editContent",
+  );
+
   return await db.transaction(async (tx) => {
-    await tx
-      .update(contexts)
-      .set({ prompt: contextUpdate.prompt })
-      .where(eq(contexts.id, contextUpdate.id));
-    const createdFiles = newFiles.map((file) => ({
+    await tx.update(contexts).set({ prompt }).where(eq(contexts.id, contextId));
+
+    const createdFiles: NewFileRow[] = newFiles.map((file) => ({
       ...file,
-      contextId: contextUpdate.id,
+      contextId,
     }));
-    if (createdFiles.length > 0) {
-      await fileService.createMany(tx, createdFiles);
-    }
-    await fileService.deleteMany(tx, deletedFilesNames);
+    await fileService.createMany(tx, createdFiles);
+    const removedFileIds = await fileService.deleteManyByIds(
+      tx,
+      contextId,
+      deletedFileIds,
+    );
+
     return {
-      context: contextUpdate,
-      newFiles: newFiles.map((file) => ({ filename: file.fileName })),
-      deletedFilesNames,
+      context: {
+        id: contextId,
+        prompt,
+        presentationId: contextAccess.presentationId,
+      },
+      newFiles: createdFiles,
+      deletedFileIds: removedFileIds,
     };
   });
 };
 
 export const contextService = {
+  requireContextAccess,
   findOne,
-  create,
+  createForPresentation,
   update,
-};
+} as const;
