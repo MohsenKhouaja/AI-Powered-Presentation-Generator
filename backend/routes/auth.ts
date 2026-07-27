@@ -31,25 +31,6 @@ if (!JWT_ACCESS_TOKEN_SECRET_KEY || !JWT_REFRESH_TOKEN_SECRET_KEY) {
 const accessTokenSecret: string = JWT_ACCESS_TOKEN_SECRET_KEY;
 const refreshTokenSecret: string = JWT_REFRESH_TOKEN_SECRET_KEY;
 
-const verifyRefreshToken = (token: unknown): jsonwebtoken.JwtPayload => {
-  if (typeof token !== "string") {
-    throw unauthorized("Authentication failed", "REFRESH_TOKEN_INVALID");
-  }
-
-  try {
-    const payload = jsonwebtoken.verify(token, refreshTokenSecret);
-    if (typeof payload === "string") {
-      throw unauthorized("Authentication failed", "REFRESH_TOKEN_INVALID");
-    }
-    return payload;
-  } catch (error) {
-    if (error instanceof jsonwebtoken.JsonWebTokenError) {
-      throw unauthorized("Authentication failed", "REFRESH_TOKEN_INVALID");
-    }
-    throw error;
-  }
-};
-
 function createAuthTokens(
   res: Response,
   userId: string,
@@ -113,20 +94,33 @@ authRouter.post("/register", async (req, res) => {
 });
 
 authRouter.post("/refresh", async (req, res) => {
-  const payload = verifyRefreshToken(req.cookies.refreshToken);
-  const accessTokenPayload = {
-    sub: payload.sub,
-    iat: Math.floor(Date.now() / 1000),
-    exp: Math.floor(Date.now() / 1000) + accessTokenExpirationSeconds,
-  };
-  const accessToken = jsonwebtoken.sign(
-    accessTokenPayload,
-    accessTokenSecret,
-    {
-      algorithm: "HS256",
-    },
-  );
-  res.status(200).send({ accessToken });
+  try {
+    const payload = jsonwebtoken.verify(
+      req.cookies.refreshToken,
+      refreshTokenSecret,
+    );
+    const accessTokenPayload = {
+      sub: payload.sub,
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + accessTokenExpirationSeconds,
+    };
+    const accessToken = jsonwebtoken.sign(
+      accessTokenPayload,
+      accessTokenSecret,
+      {
+        algorithm: "HS256",
+      },
+    );
+    res.status(200).send({ accessToken });
+  } catch (error) {
+    if (error instanceof jsonwebtoken.JsonWebTokenError) {
+      throw unauthorized(
+        "Authentication failed",
+        "REFRESH_TOKEN_INVALID",
+      );
+    }
+    throw error;
+  }
 });
 
 export default authRouter;

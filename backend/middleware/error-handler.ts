@@ -35,7 +35,21 @@ const normalizeError = (error: unknown): unknown => {
 };
 
 const getStatus = (error: unknown): number => {
-  return error instanceof HttpError ? error.status : 500;
+  if (error instanceof HttpError) {
+    return error.status;
+  }
+
+  const candidate =
+    typeof (error as { status?: unknown })?.status === "number"
+      ? (error as { status: number }).status
+      : (error as { statusCode?: unknown })?.statusCode;
+
+  return typeof candidate === "number" &&
+    Number.isInteger(candidate) &&
+    candidate >= 400 &&
+    candidate <= 599
+    ? candidate
+    : 500;
 };
 
 const getMessage = (error: unknown): string =>
@@ -62,7 +76,9 @@ export const errorHandler: ErrorRequestHandler = (
   const code =
     normalizedError instanceof HttpError
       ? normalizedError.code
-      : "INTERNAL_ERROR";
+      : status === 400
+        ? "BAD_REQUEST"
+        : "INTERNAL_ERROR";
 
   res.err = error instanceof Error ? error : new Error(message);
   res.status(status).json({
