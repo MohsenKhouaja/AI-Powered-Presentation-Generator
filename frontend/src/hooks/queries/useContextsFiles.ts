@@ -19,48 +19,33 @@ export interface SharedFileRecord {
   contextId: string;
 }
 
-interface CreateContextInput {
-  prompt: string;
-  presentationId?: string | null;
-  files?: File[];
-}
-
 interface UpdateContextInput {
   contextId: string;
   prompt: string;
-  deletedFilesNames?: string[];
+  deletedFileIds?: string[];
   files?: File[];
-}
-
-interface CreateContextResponse {
-  context: ContextRecord;
-  files: SharedFileRecord[];
 }
 
 interface UpdateContextResponse {
   context: ContextRecord;
   newFiles: SharedFileRecord[];
-  deletedFilesIds: string[];
+  deletedFileIds: string[];
 }
 
 function buildContextFormData(
   prompt: string,
   files: File[] = [],
-  deletedFilesNames: string[] = [],
-  presentationId?: string | null,
+  deletedFileIds: string[] = [],
 ): FormData {
   const formData = new FormData();
   formData.append("prompt", prompt);
-  if (presentationId) {
-    formData.append("presentationId", presentationId);
-  }
 
   for (const file of files) {
     formData.append("files", file);
   }
 
-  if (deletedFilesNames.length > 0) {
-    formData.append("deletedFilesNames", JSON.stringify(deletedFilesNames));
+  if (deletedFileIds.length > 0) {
+    formData.append("deletedFileIds", JSON.stringify(deletedFileIds));
   }
 
   return formData;
@@ -100,41 +85,6 @@ export function useContextFilesQuery(contextId: string | null, enabled = true) {
   });
 }
 
-export function useCreateContextMutation() {
-  const api = useApiClient();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ prompt, presentationId, files = [] }: CreateContextInput) => {
-      const body = buildContextFormData(prompt, files, [], presentationId);
-      return api.post<CreateContextResponse>("/api/contexts", body);
-    },
-    onSuccess: async (result) => {
-      await queryClient.invalidateQueries({
-        queryKey: queryKeys.contexts.all(),
-      });
-      queryClient.setQueryData(
-        queryKeys.contexts.detail(result.context.id),
-        result.context,
-      );
-      if (result.context.presentationId) {
-        queryClient.setQueryData(
-          queryKeys.contexts.byPresentation(result.context.presentationId),
-          result.context,
-        );
-      }
-      queryClient.setQueryData(
-        queryKeys.contexts.files(result.context.id),
-        result.files,
-      );
-      await queryClient.invalidateQueries({
-        queryKey: queryKeys.presentations.details(),
-      });
-    },
-    onError: () => toast.error("Could not save context"),
-  });
-}
-
 export function useUpdateContextMutation() {
   const api = useApiClient();
   const queryClient = useQueryClient();
@@ -143,10 +93,10 @@ export function useUpdateContextMutation() {
     mutationFn: ({
       contextId,
       prompt,
-      deletedFilesNames = [],
+      deletedFileIds = [],
       files = [],
     }: UpdateContextInput) => {
-      const body = buildContextFormData(prompt, files, deletedFilesNames);
+      const body = buildContextFormData(prompt, files, deletedFileIds);
       return api.put<UpdateContextResponse>(`/api/contexts/${contextId}`, body);
     },
     onSuccess: async (result, variables) => {

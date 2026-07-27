@@ -7,7 +7,11 @@ import App from "./App.tsx";
 
 const queryClient = new QueryClient({
   queryCache: new QueryCache({
-    onError: () => toast.error("Failed to load data"),
+    onError: (_error, query) => {
+      if (!query.meta?.suppressGlobalErrorToast) {
+        toast.error("Failed to load data");
+      }
+    },
   }),
   defaultOptions: {
     queries: {

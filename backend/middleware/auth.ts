@@ -2,36 +2,55 @@ import jsonwebtoken from "jsonwebtoken";
 import dotenv from "dotenv";
 import type { NextFunction, Request, Response } from "express";
 import type { UUID } from "node:crypto";
+import { unauthorized } from "../errors/http-error.js";
 dotenv.config({ quiet: true });
 
-function authMiddleware(req: Request, res: Response, next: NextFunction) {
+function authMiddleware(req: Request, _res: Response, next: NextFunction) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    next(
+      unauthorized("Unauthorized, token missing", "AUTH_TOKEN_MISSING"),
+    );
+    return;
+  }
+
+  const secret = process.env.JWT_ACCESS_TOKEN_SECRET_KEY;
+  if (!secret) {
+    next(
+      new Error("JWT_ACCESS_TOKEN_SECRET_KEY environment variable is not set"),
+    );
+    return;
+  }
+
+  const token = authHeader.slice("Bearer ".length);
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return res.status(401).json({ message: "Unauthorized, token missing" });
-    }
-    const token = authHeader.split(" ")[1];
-    if (!process.env.JWT_ACCESS_TOKEN_SECRET_KEY) {
-      throw new Error(
-        "JWT_ACCESS_TOKEN_SECRET_KEY environment variable is not set",
-      );
-    }
     const payload = jsonwebtoken.verify(
       token,
-      process.env.JWT_ACCESS_TOKEN_SECRET_KEY,
+      secret,
     );
     if (!payload || typeof payload !== "object" || !("sub" in payload)) {
-      return res.status(401).json({ message: "Unauthorized, invalid token" });
+      next(
+        unauthorized("Unauthorized, invalid token", "AUTH_TOKEN_INVALID"),
+      );
+      return;
     }
     req.authenticatedUserId = payload.sub as UUID;
     req.log = req.log.child({ userId: payload.sub });
     next();
   } catch (error) {
-    const message =
-      error instanceof jsonwebtoken.TokenExpiredError
-        ? "Unauthorized, token expired"
-        : "Unauthorized, invalid token";
-    return res.status(401).json({ message });
+    if (error instanceof jsonwebtoken.TokenExpiredError) {
+      next(
+        unauthorized("Unauthorized, token expired", "AUTH_TOKEN_EXPIRED"),
+      );
+      return;
+    }
+    if (error instanceof jsonwebtoken.JsonWebTokenError) {
+      next(
+        unauthorized("Unauthorized, invalid token", "AUTH_TOKEN_INVALID"),
+      );
+      return;
+    }
+    next(error);
   }
 }
 

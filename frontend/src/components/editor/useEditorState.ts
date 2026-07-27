@@ -17,10 +17,8 @@ import {
 import {
   useContextByPresentationQuery,
   useContextFilesQuery,
-  useCreateContextMutation,
   useUpdateContextMutation,
 } from "@/hooks/queries/useContextsFiles";
-import { useInvitePresentationAccessMutation } from "@/hooks/queries/useShareReadOnly";
 
 export function useEditorState() {
   const { id } = useParams<{ id: string }>();
@@ -28,7 +26,6 @@ export function useEditorState() {
   const slidesQuery = usePresentationSlidesQuery(id ?? null, Boolean(id));
   const linkedContextQuery = useContextByPresentationQuery(id ?? null);
 
-  const [createdContextId, setCreatedContextId] = useState<string | null>(null);
   const [promptDraft, setPromptDraft] = useState<string | null>(null);
   const [titleOverride, setTitleOverride] = useState<string | null>(null);
   const [selectedSlideIndex, setSelectedSlideIndex] = useState(0);
@@ -37,10 +34,8 @@ export function useEditorState() {
   const [lastSavedById, setLastSavedById] = useState<Record<string, string>>({});
   const [isSavedVisible, setIsSavedVisible] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
-  const [deletedFilesNames, setDeletedFilesNames] = useState<string[]>([]);
+  const [deletedFileIds, setDeletedFileIds] = useState<string[]>([]);
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteExpiresAt, setInviteExpiresAt] = useState("");
   const [draggingSlideId, setDraggingSlideId] = useState<string | null>(null);
   const [dragOverSlideId, setDragOverSlideId] = useState<string | null>(null);
   const [numSlides, setNumSlides] = useState<string>("");
@@ -52,7 +47,6 @@ export function useEditorState() {
   const previewWrapperRef = useRef<HTMLDivElement>(null);
   const [previewScale, setPreviewScale] = useState(1);
 
-  const createContextMutation = useCreateContextMutation();
   const updateContextMutation = useUpdateContextMutation();
   const updatePresentationMutation = useUpdatePresentationMutation();
   const createSlideMutation = useCreateSlideMutation(id ?? null);
@@ -60,9 +54,8 @@ export function useEditorState() {
   const deleteSlideMutation = useDeleteSlideMutation(id ?? null);
   const reorderSlidesMutation = useReorderSlidesMutation(id ?? null);
   const generateSlidesMutation = useGenerateSlidesFromContextMutation(id ?? null);
-  const inviteAccessMutation = useInvitePresentationAccessMutation(id ?? null);
 
-  const activeContextId = createdContextId ?? linkedContextQuery.data?.id ?? null;
+  const activeContextId = linkedContextQuery.data?.id ?? null;
   const contextFilesQuery = useContextFilesQuery(activeContextId, Boolean(activeContextId));
 
   const slides = useMemo(() => {
@@ -113,8 +106,9 @@ export function useEditorState() {
 
   // Cleanup timers on unmount
   useEffect(() => {
+    const autosaveTimers = autosaveTimersRef.current;
     return () => {
-      Object.values(autosaveTimersRef.current).forEach((timer) =>
+      Object.values(autosaveTimers).forEach((timer) =>
         window.clearTimeout(timer),
       );
       if (savedTimerRef.current) window.clearTimeout(savedTimerRef.current);
@@ -132,13 +126,13 @@ export function useEditorState() {
     return () => ro.disconnect();
   }, [isPreviewVisible]);
 
-  const showSavedNotice = () => {
+  const showSavedNotice = useCallback(() => {
     setIsSavedVisible(true);
     if (savedTimerRef.current) window.clearTimeout(savedTimerRef.current);
     savedTimerRef.current = window.setTimeout(() => setIsSavedVisible(false), 1500);
-  };
+  }, []);
 
-  const saveSlideContent = async (slideId: string, content: string, { showNotice }: { showNotice: boolean }) => {
+  const saveSlideContent = useCallback(async (slideId: string, content: string, { showNotice }: { showNotice: boolean }) => {
     if (lastSavedById[slideId] === content) return;
     if (savingSlidesRef.current.has(slideId)) return;
     savingSlidesRef.current.add(slideId);
@@ -151,7 +145,7 @@ export function useEditorState() {
     } finally {
       savingSlidesRef.current.delete(slideId);
     }
-  };
+  }, [lastSavedById, showSavedNotice, updateSlideMutation]);
 
   const scheduleAutosave = (slideId: string, content: string) => {
     const existingTimer = autosaveTimersRef.current[slideId];
@@ -259,7 +253,7 @@ export function useEditorState() {
         .mutateAsync({ presentationId: id, title: normalizedTitle })
         .catch(() => undefined);
     }
-  }, [currentSlide, detailQuery.data?.title, id, markdownDraft, titleDraft, updatePresentationMutation]);
+  }, [currentSlide, detailQuery.data?.title, id, markdownDraft, saveSlideContent, titleDraft, updatePresentationMutation]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -271,16 +265,6 @@ export function useEditorState() {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [onSaveSelectedSlide]);
-
-  const onInviteAccess = async (event: React.FormEvent) => {
-    event.preventDefault();
-    const email = inviteEmail.trim();
-    if (!email) return;
-    const expiresAtIso = inviteExpiresAt ? new Date(inviteExpiresAt).toISOString() : null;
-    await inviteAccessMutation.mutateAsync({ email, expiresAt: expiresAtIso });
-    setInviteEmail("");
-    setInviteExpiresAt("");
-  };
 
   const onPickFiles = (event: React.ChangeEvent<HTMLInputElement>) => {
     const nextFiles = Array.from(event.target.files ?? []);
@@ -296,21 +280,12 @@ export function useEditorState() {
           contextId: activeContextId,
           prompt: effectivePromptDraft,
           files: pendingFiles,
-          deletedFilesNames,
+          deletedFileIds,
         })
         .catch(() => undefined);
-    } else {
-      const result = await createContextMutation
-        .mutateAsync({
-          prompt: effectivePromptDraft,
-          presentationId: id,
-          files: pendingFiles,
-        })
-        .catch(() => null);
-      if (result?.context.id) setCreatedContextId(result.context.id);
     }
     setPendingFiles([]);
-    setDeletedFilesNames([]);
+    setDeletedFileIds([]);
   };
 
   const onGenerateSlides = async () => {
@@ -353,10 +328,8 @@ export function useEditorState() {
     previewWrapperRef,
     previewScale,
     pendingFiles,
-    deletedFilesNames,
+    deletedFileIds,
     isShareDialogOpen,
-    inviteEmail,
-    inviteExpiresAt,
     draggingSlideId,
     dragOverSlideId,
     numSlides,
@@ -366,7 +339,6 @@ export function useEditorState() {
     contextFilesQuery,
 
     // Mutations
-    createContextMutation,
     updateContextMutation,
     updatePresentationMutation,
     createSlideMutation,
@@ -374,18 +346,15 @@ export function useEditorState() {
     deleteSlideMutation,
     reorderSlidesMutation,
     generateSlidesMutation,
-    inviteAccessMutation,
 
     // Actions
     setTitleOverride,
     setIsPreviewVisible,
     setIsShareDialogOpen,
-    setInviteEmail,
-    setInviteExpiresAt,
     setNumSlides,
     setPromptDraft,
     setPendingFiles,
-    setDeletedFilesNames,
+    setDeletedFileIds,
     setSelectedSlideIndex,
 
     onAddSlide,
@@ -395,7 +364,6 @@ export function useEditorState() {
     onDropSlide,
     onSaveSelectedSlide,
     onSaveContext,
-    onInviteAccess,
     onPickFiles,
     onGenerateSlides,
     onMarkdownChange,

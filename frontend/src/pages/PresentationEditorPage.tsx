@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { useEditorState } from "@/components/editor/useEditorState";
@@ -9,7 +9,7 @@ import { MarkdownEditor } from "@/components/editor/MarkdownEditor";
 import { LivePreview } from "@/components/editor/LivePreview";
 import { SidebarContext } from "@/components/editor/SidebarContext";
 import { SidebarTheme } from "@/components/editor/SidebarTheme";
-import { ShareDialog } from "@/components/editor/ShareDialog";
+import { ShareDialog } from "@/components/dialogs/ShareDialog";
 
 export function PresentationEditorPage() {
   const state = useEditorState();
@@ -35,6 +35,15 @@ export function PresentationEditorPage() {
     );
   }
 
+  if (!state.detailQuery.data.capabilities.editContent) {
+    return (
+      <Navigate
+        to={`/presentations/${state.detailQuery.data.id}`}
+        replace
+      />
+    );
+  }
+
   const {
     detailQuery,
     slides,
@@ -46,25 +55,19 @@ export function PresentationEditorPage() {
     isSavedVisible,
     pendingFiles,
     isShareDialogOpen,
-    inviteEmail,
-    inviteExpiresAt,
     draggingSlideId,
     dragOverSlideId,
     numSlides,
     activeContextId,
     effectivePromptDraft,
     contextFilesQuery,
-    createContextMutation,
     updateContextMutation,
     updateSlideMutation,
     deleteSlideMutation,
     generateSlidesMutation,
-    inviteAccessMutation,
     setTitleOverride,
     setIsPreviewVisible,
     setIsShareDialogOpen,
-    setInviteEmail,
-    setInviteExpiresAt,
     setNumSlides,
     setPromptDraft,
     setSelectedSlideIndex,
@@ -75,7 +78,6 @@ export function PresentationEditorPage() {
     onDropSlide,
     onSaveSelectedSlide,
     onSaveContext,
-    onInviteAccess,
     onPickFiles,
     onGenerateSlides,
     onMarkdownChange,
@@ -90,6 +92,7 @@ export function PresentationEditorPage() {
         presentationId={detailQuery.data.id}
         titleDraft={titleDraft}
         isPreviewVisible={isPreviewVisible}
+        canManageAccess={detailQuery.data.capabilities.manageAccess}
         onTitleChange={setTitleOverride}
         onTogglePreview={() => setIsPreviewVisible((current) => !current)}
         onOpenShare={() => setIsShareDialogOpen(true)}
@@ -117,14 +120,13 @@ export function PresentationEditorPage() {
               effectivePromptDraft={effectivePromptDraft}
               pendingFiles={pendingFiles}
               contextFiles={contextFilesQuery.data}
-              isCreating={createContextMutation.isPending}
               isUpdating={updateContextMutation.isPending}
               isGenerating={generateSlidesMutation.isPending}
               numSlides={numSlides}
               onPromptChange={setPromptDraft}
               onPickFiles={onPickFiles}
               onRemovePendingFile={(file) => state.setPendingFiles((current) => current.filter((c) => c !== file))}
-              onMarkFileForDeletion={(fileName) => state.setDeletedFilesNames((current) => [...current, fileName])}
+              onMarkFileForDeletion={(fileId) => state.setDeletedFileIds((current) => [...current, fileId])}
               onSaveContext={onSaveContext}
               onGenerateSlides={onGenerateSlides}
               onNumSlidesChange={setNumSlides}
@@ -156,14 +158,9 @@ export function PresentationEditorPage() {
       </div>
 
       <ShareDialog
+        presentationId={detailQuery.data.id}
         open={isShareDialogOpen}
         onOpenChange={setIsShareDialogOpen}
-        inviteEmail={inviteEmail}
-        inviteExpiresAt={inviteExpiresAt}
-        isPending={inviteAccessMutation.isPending}
-        onEmailChange={setInviteEmail}
-        onExpiresAtChange={setInviteExpiresAt}
-        onSubmit={onInviteAccess}
       />
     </main>
   );

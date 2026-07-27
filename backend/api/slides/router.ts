@@ -1,6 +1,7 @@
 import { Router } from "express";
 import type { UUID } from "node:crypto";
 import { db } from "../../database/index.js";
+import { badRequest } from "../../errors/http-error.js";
 import { slidesService } from "./slides-service.js";
 
 export const slidesRouter = Router();
@@ -37,8 +38,7 @@ slidesRouter.post("/presentations/:presentationId/slides", async (req, res) => {
     typeof req.body?.slideOrder === "number" ? req.body.slideOrder : undefined;
 
   if (!content.trim()) {
-    res.status(400).json({ error: "Content is required" });
-    return;
+    throw badRequest("Content is required", "SLIDE_CONTENT_REQUIRED");
   }
 
   const createdSlide = await slidesService.create(db, userId, presentationId, {
@@ -64,18 +64,17 @@ slidesRouter.post(
       typeof numSlidesRaw === "number" ? Math.trunc(numSlidesRaw) : undefined;
 
     if (!contextId) {
-      res.status(400).json({ error: "contextId is required" });
-      return;
+      throw badRequest("contextId is required", "CONTEXT_ID_REQUIRED");
     }
 
     if (
       typeof numSlides !== "undefined" &&
       (!Number.isFinite(numSlides) || numSlides < 1 || numSlides > 50)
     ) {
-      res
-        .status(400)
-        .json({ error: "numSlides must be an integer between 1 and 50" });
-      return;
+      throw badRequest(
+        "numSlides must be an integer between 1 and 50",
+        "INVALID_SLIDE_COUNT",
+      );
     }
 
     const generatedSlides = await slidesService.generateFromContext(
@@ -100,8 +99,7 @@ slidesRouter.put(
       typeof req.body?.content === "string" ? req.body.content : "";
 
     if (!content.trim()) {
-      res.status(400).json({ error: "Content is required" });
-      return;
+      throw badRequest("Content is required", "SLIDE_CONTENT_REQUIRED");
     }
 
     const updatedSlide = await slidesService.update(

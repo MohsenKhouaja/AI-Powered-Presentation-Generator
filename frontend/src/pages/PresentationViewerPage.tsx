@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { PencilIcon } from "lucide-react";
 import { usePresentationDetailQuery } from "@/hooks/queries/usePresentations";
@@ -11,36 +11,15 @@ import {
   EmptyHeader,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { SlideCanvas } from "@/components/SlideCanvas";
-import { SlideNavigationFooter } from "@/components/SlideNavigationFooter";
+import { PresentationPlayback } from "@/components/PresentationPlayback";
 
 export function PresentationViewerPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const detailQuery = usePresentationDetailQuery(id ?? null, Boolean(id));
   const slidesQuery = usePresentationSlidesQuery(id ?? null, Boolean(id));
-  const [slideIndex, setSlideIndex] = useState(0);
-
   const slides = useMemo(() => slidesQuery.data ?? [], [slidesQuery.data]);
-
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "ArrowRight") {
-        setSlideIndex((current) =>
-          Math.min(current + 1, Math.max(slides.length - 1, 0)),
-        );
-      }
-      if (event.key === "ArrowLeft") {
-        setSlideIndex((current) => Math.max(current - 1, 0));
-      }
-      if (event.key === "Escape") {
-        navigate("/dashboard");
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [navigate, slides.length]);
+  const exitViewer = useCallback(() => navigate("/dashboard"), [navigate]);
 
   if (detailQuery.isPending || slidesQuery.isPending) {
     return (
@@ -78,47 +57,26 @@ export function PresentationViewerPage() {
     );
   }
 
-  const currentSlide = slides[slideIndex];
-
   return (
-    <main
-      className="grid min-h-screen grid-rows-[1fr_auto] bg-background"
-      aria-label="Presentation viewer"
-    >
-      <section className="mx-auto flex w-full max-w-6xl items-center p-4 md:p-8">
-        <div className="w-full">
-          <header className="mb-4 flex flex-wrap items-center justify-between gap-2">
-            <h1 className="text-xl font-semibold">
-              {detailQuery.data.title}
-            </h1>
-            <div className="flex items-center gap-2">
-              <Button asChild size="sm" variant="outline">
-                <Link to="/dashboard">Exit</Link>
-              </Button>
-              <Button asChild size="sm" variant="outline">
-                <Link to={`/presentations/${detailQuery.data.id}/edit`}>
-                  <PencilIcon className="mr-1 size-4" /> Edit
-                </Link>
-              </Button>
-            </div>
-          </header>
-
-          <div role="region" aria-live="polite" aria-atomic="true" aria-label={`Slide ${slideIndex + 1} of ${slides.length}`}>
-            <SlideCanvas content={currentSlide.content} />
-          </div>
-        </div>
-      </section>
-
-      <SlideNavigationFooter
-        slideIndex={slideIndex}
-        totalSlides={slides.length}
-        onPrevious={() => setSlideIndex((current) => Math.max(current - 1, 0))}
-        onNext={() =>
-          setSlideIndex((current) =>
-            Math.min(current + 1, Math.max(slides.length - 1, 0)),
-          )
-        }
-      />
-    </main>
+    <PresentationPlayback
+      title={detailQuery.data.title}
+      slides={slides}
+      ariaLabel="Presentation viewer"
+      onExit={exitViewer}
+      actions={
+        <>
+          <Button asChild size="sm" variant="outline">
+            <Link to="/dashboard">Exit</Link>
+          </Button>
+          {detailQuery.data.capabilities.editContent ? (
+            <Button asChild size="sm" variant="outline">
+              <Link to={`/presentations/${detailQuery.data.id}/edit`}>
+                <PencilIcon className="mr-1 size-4" /> Edit
+              </Link>
+            </Button>
+          ) : null}
+        </>
+      }
+    />
   );
 }

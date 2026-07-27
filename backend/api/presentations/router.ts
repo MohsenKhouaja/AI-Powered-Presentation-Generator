@@ -1,5 +1,6 @@
 import { Router } from "express";
 import type { UUID } from "node:crypto";
+import { badRequest } from "../../errors/http-error.js";
 import { presentationsService } from "./presentations-service.js";
 export const presentationsRouter = Router();
 import { db } from "../../database/index.js";
@@ -23,10 +24,14 @@ presentationsRouter.get("/presentation/:id", async (req, res) => {
 
 presentationsRouter.post("/presentation", async (req, res) => {
   const userId = req.authenticatedUserId as UUID;
-  const title = req.body?.title ?? "";
+  const title =
+    typeof req.body?.title === "string" ? req.body.title.trim() : "";
+  if (!title) {
+    throw badRequest("Title is required", "PRESENTATION_TITLE_REQUIRED");
+  }
   const createdPresentation = await presentationsService.create(db, {
-    title: title,
-    userId: userId,
+    title,
+    userId,
   });
   res.status(201).json(createdPresentation);
 });
@@ -39,8 +44,7 @@ presentationsRouter.put("/presentation/:id", async (req, res) => {
     typeof req.body?.title === "string" ? req.body.title.trim() : "";
 
   if (!title) {
-    res.status(400).json({ error: "Title is required" });
-    return;
+    throw badRequest("Title is required", "PRESENTATION_TITLE_REQUIRED");
   }
   await presentationsService.updateTitle(
     db,

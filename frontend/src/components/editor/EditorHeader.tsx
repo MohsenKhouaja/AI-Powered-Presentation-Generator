@@ -9,6 +9,7 @@ interface EditorToolbarProps {
   presentationId: string;
   titleDraft: string;
   isPreviewVisible: boolean;
+  canManageAccess: boolean;
   onTitleChange: (title: string) => void;
   onTogglePreview: () => void;
   onOpenShare: () => void;
@@ -18,6 +19,7 @@ export function EditorHeader({
   presentationId,
   titleDraft,
   isPreviewVisible,
+  canManageAccess,
   onTitleChange,
   onTogglePreview,
   onOpenShare,
@@ -50,13 +52,15 @@ export function EditorHeader({
             <EyeIcon className="mr-1 size-4" />
             {isPreviewVisible ? "Hide Preview" : "Preview"}
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onOpenShare}
-          >
-            <Share2Icon className="mr-1 size-4" /> Share
-          </Button>
+          {canManageAccess ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onOpenShare}
+            >
+              <Share2Icon className="mr-1 size-4" /> Share
+            </Button>
+          ) : null}
         </div>
       </div>
     </header>

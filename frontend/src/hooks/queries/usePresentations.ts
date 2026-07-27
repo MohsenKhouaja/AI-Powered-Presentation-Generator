@@ -6,9 +6,15 @@ import { queryKeys } from "@/lib/queryKeys";
 export interface PresentationSummary {
   id: string;
   title: string;
-  userId: string;
   createdAt: string;
-  AccessType: "own" | "edit" | null;
+  accessLevel: "owner" | "editor" | "viewer";
+  capabilities: {
+    view: boolean;
+    viewSources: boolean;
+    editContent: boolean;
+    manageAccess: boolean;
+    delete: boolean;
+  };
 }
 
 export interface PresentationDetail extends PresentationSummary {
@@ -88,15 +94,15 @@ export function useUpdatePresentationMutation() {
 
   return useMutation({
     mutationFn: ({ presentationId, title }: UpdatePresentationInput) =>
-      api.put<PresentationDetail>(`/api/presentation/${presentationId}`, {
+      api.put<void>(`/api/presentation/${presentationId}`, {
         title,
       }),
-    onSuccess: async (updatedPresentation) => {
+    onSuccess: async (_result, variables) => {
       await queryClient.invalidateQueries({
         queryKey: queryKeys.presentations.all(),
       });
       await queryClient.invalidateQueries({
-        queryKey: queryKeys.presentations.detail(updatedPresentation.id),
+        queryKey: queryKeys.presentations.detail(variables.presentationId),
       });
     },
     onError: () => toast.error("Could not save presentation"),
