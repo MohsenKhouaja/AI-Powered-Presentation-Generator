@@ -1,132 +1,109 @@
 import { randomUUID } from "node:crypto";
 import type { UUID } from "node:crypto";
-
+import { eq } from "drizzle-orm";
+import { requirePresentationAccess } from "../../authorization/presentation-authorization.js";
+import { evaluatePresentationPolicy } from "../../authorization/policy.js";
 import type { DBContext } from "../../database/index.js";
 import { presentations } from "../../database/drizzle/schema.js";
-import { eq } from "drizzle-orm";
 import type {
   NewPresentationRow,
-  presentationDetail,
+  PresentationDetail,
   PresentationRow,
-  SlideRow,
+  PresentationSummary,
 } from "../../database/types.js";
 import { contextService } from "../contexts/contexts-service.js";
-import { slidesService } from "../slides/slides-service.js";
-
-const hasActiveEditAccess = async (
-  db: DBContext,
-  presentationId: UUID,
-  userId: UUID,
-): Promise<boolean> => {
-  const activeEditAccess = await db.query.editAccess.findFirst({
-    where: {
-      presentationId,
-      userId,
-      OR: [{ expiresAt: { isNull: true } }, { expiresAt: { gt: new Date() } }],
-    },
-    columns: { id: true },
-  });
-
-  return Boolean(activeEditAccess);
-};
 
 const findMany = async (
   db: DBContext,
   userId: UUID,
-): Promise<PresentationRow[]> => {
-  const ownedPresentationRows: PresentationRow[] =
-    await db.query.presentations.findMany({
-      where: { userId },
-      orderBy: { createdAt: "desc" },
-    });
-  const ownedPresentations: PresentationRow[] = ownedPresentationRows.map(
-    (row) => ({
-      id: row.id,
-      title: row.title,
-      userId: row.userId as UUID,
-      createdAt: row.createdAt,
-      AccessType: "own" as const,
-    }),
-  );
-
-  const editPresentationIds = await db.query.editAccess.findMany({
+): Promise<PresentationSummary[]> => {
+  const now = new Date();
+  const ownedRows = await db.query.presentations.findMany({
     where: { userId },
-    columns: { presentationId: true },
+    orderBy: { createdAt: "desc" },
   });
-  const editPresentationIdsArray: string[] = editPresentationIds.map(
-    (elm) => elm.presentationId,
-  );
+  const grantRows = await db.query.presentationAccessGrants.findMany({
+    where: {
+      userId,
+      OR: [{ expiresAt: { isNull: true } }, { expiresAt: { gt: now } }],
+    },
+    with: { presentation: true },
+  });
 
-  const editPresentationRows: PresentationRow[] =
-    editPresentationIdsArray.length > 0
-      ? await db.query.presentations.findMany({
-          where: { id: { in: editPresentationIdsArray } },
-          orderBy: { createdAt: "desc" },
-        })
-      : [];
-  const editPresentations: PresentationRow[] = editPresentationRows.map(
-    (row) => ({
+  return [
+    ...ownedRows.map((row) => ({
       id: row.id,
       title: row.title,
-      userId: row.userId as UUID,
       createdAt: row.createdAt,
-      AccessType: "edit" as const,
-    }),
-  );
-
-  return [...ownedPresentations, ...editPresentations];
+      accessLevel: "owner" as const,
+      capabilities: evaluatePresentationPolicy({
+        subject: { userId },
+        resource: { ownerId: row.userId },
+        relationship: {},
+        environment: { now },
+      }).capabilities,
+    })),
+    ...grantRows
+      .filter((row) => row.presentation !== null)
+      .map((row) => ({
+        id: row.presentation!.id,
+        title: row.presentation!.title,
+        createdAt: row.presentation!.createdAt,
+        accessLevel: row.permission,
+        capabilities: evaluatePresentationPolicy({
+          subject: { userId },
+          resource: { ownerId: row.presentation!.userId },
+          relationship: {
+            grant: {
+              permission: row.permission,
+              expiresAt: row.expiresAt,
+            },
+          },
+          environment: { now },
+        }).capabilities,
+      })),
+  ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 };
 
 const findOneDetailed = async (
   db: DBContext,
-  userID: UUID,
+  userId: UUID,
   presentationId: UUID,
-): Promise<presentationDetail> => {
-  const presentationRow = await db.query.presentations.findFirst({
-    where: { id: presentationId },
-    columns: { id: true, title: true, userId: true, createdAt: true },
-    with: {
-      slides: {
-        orderBy: { slideOrder: "asc" },
-      },
-      contexts: true,
-    },
+): Promise<PresentationDetail> => {
+  const authorization = await requirePresentationAccess(db, {
+    userId,
+    presentationId,
+    action: "view",
+  });
+  const slideRows = await db.query.slides.findMany({
+    where: { presentationId },
+    orderBy: { slideOrder: "asc" },
   });
 
-  if (!presentationRow || !presentationRow.contexts) {
-    throw new Error("E004: presentation doesn't exist");
-  }
-
-  const isOwner = presentationRow.userId === userID;
-
-  let accessType: "own" | "edit";
-  if (isOwner) {
-    accessType = "own";
-  } else {
-    const canEdit = await hasActiveEditAccess(db, presentationId, userID);
-    if (!canEdit) {
-      throw new Error("E005: user unauthorized to access this presentation");
+  let context = null;
+  if (authorization.capabilities.viewSources) {
+    const contextRow = await db.query.contexts.findFirst({
+      where: { presentationId },
+      columns: { id: true },
+    });
+    if (contextRow) {
+      context = await contextService.findOne(
+        db,
+        userId,
+        contextRow.id as UUID,
+      );
     }
-    accessType = "edit";
   }
 
-  const slideRows: SlideRow[] = presentationRow.slides ?? [];
-  const contextRow = await contextService.findOne(
-    db,
-    presentationRow.contexts.id as UUID,
-  );
-
-  const detail: presentationDetail = {
-    id: presentationRow.id,
-    title: presentationRow.title,
-    userId: presentationRow.userId as UUID,
-    createdAt: presentationRow.createdAt,
+  return {
+    id: authorization.presentation.id,
+    title: authorization.presentation.title,
+    createdAt: authorization.presentation.createdAt,
     slides: slideRows,
-    context: contextRow,
-    AccessType: accessType,
+    context,
+    accessLevel: authorization.accessLevel,
+    capabilities: authorization.capabilities,
   };
-
-  return detail;
 };
 
 const create = async (
@@ -142,38 +119,31 @@ const create = async (
       userId: presentation.userId,
       createdAt,
     });
-    await contextService.create(
+    await contextService.createForPresentation(
       tx,
-      {
-        prompt: "",
-        presentationId,
-      },
+      { prompt: "", presentationId },
       [],
     );
   });
   return {
     id: presentationId,
     title: presentation.title,
-    userId: presentation.userId,
+    userId: presentation.userId as UUID,
     createdAt,
   };
 };
 
-const remove = async (db: DBContext, userId: UUID, presentationId: UUID) => {
-  const presentationRow = await db.query.presentations.findFirst({
-    where: { id: presentationId },
-    columns: { userId: true },
+const remove = async (
+  db: DBContext,
+  userId: UUID,
+  presentationId: UUID,
+): Promise<void> => {
+  await requirePresentationAccess(db, {
+    userId,
+    presentationId,
+    action: "delete",
   });
-  if (!presentationRow) {
-    throw new Error("E006: presentation doesn't exist");
-  }
-  if (presentationRow.userId !== userId) {
-    throw new Error("E007: user not authorized to delete this presentation");
-  }
-  await db.transaction(async (tx) => {
-    await slidesService.removeAllByPresentation(tx, userId, presentationId);
-    await tx.delete(presentations).where(eq(presentations.id, presentationId));
-  });
+  await db.delete(presentations).where(eq(presentations.id, presentationId));
 };
 
 const updateTitle = async (
@@ -181,22 +151,15 @@ const updateTitle = async (
   userId: UUID,
   presentationId: UUID,
   title: string,
-) => {
-  const presentationRow = await db.query.presentations.findFirst({
-    where: { id: presentationId },
-    columns: { userId: true },
+): Promise<void> => {
+  await requirePresentationAccess(db, {
+    userId,
+    presentationId,
+    action: "editContent",
   });
-  if (!presentationRow) {
-    throw new Error("E008: presentation doesn't exist");
-  }
-
-  const isOwner = presentationRow.userId === userId;
-  if (!isOwner) {
-    throw new Error("E009: user unauthorized to edit this title");
-  }
   await db
     .update(presentations)
-    .set({ title: title })
+    .set({ title })
     .where(eq(presentations.id, presentationId));
 };
 
