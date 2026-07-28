@@ -313,59 +313,90 @@ export function useEditorState() {
     scheduleAutosave(currentSlide.id, next);
   };
 
+  const onTogglePreview = () => {
+    setIsPreviewVisible((current) => !current);
+  };
+
+  const onOpenShare = () => {
+    setIsShareDialogOpen(true);
+  };
+
+  const onRemovePendingFile = (file: File) => {
+    setPendingFiles((current) => current.filter((candidate) => candidate !== file));
+  };
+
+  const onMarkFileForDeletion = (fileId: string) => {
+    setDeletedFileIds((current) => [...current, fileId]);
+  };
+
   return {
-    // Data
-    id,
-    detailQuery,
-    slidesQuery,
-    slides,
-    currentSlide,
-    markdownDraft,
-    titleDraft,
-    safeSelectedSlideIndex,
-    isPreviewVisible,
-    isSavedVisible,
-    previewWrapperRef,
-    previewScale,
-    pendingFiles,
-    deletedFileIds,
-    isShareDialogOpen,
-    draggingSlideId,
-    dragOverSlideId,
-    numSlides,
-    activeContextId,
-    effectivePromptDraft,
-    linkedContextQuery,
-    contextFilesQuery,
-
-    // Mutations
-    updateContextMutation,
-    updatePresentationMutation,
-    createSlideMutation,
-    updateSlideMutation,
-    deleteSlideMutation,
-    reorderSlidesMutation,
-    generateSlidesMutation,
-
-    // Actions
-    setTitleOverride,
-    setIsPreviewVisible,
-    setIsShareDialogOpen,
-    setNumSlides,
-    setPromptDraft,
-    setPendingFiles,
-    setDeletedFileIds,
-    setSelectedSlideIndex,
-
-    onAddSlide,
-    onDeleteSlide,
-    handleDragStart,
-    handleDragEnd,
-    onDropSlide,
-    onSaveSelectedSlide,
-    onSaveContext,
-    onPickFiles,
-    onGenerateSlides,
-    onMarkdownChange,
+    status: {
+      isPending: detailQuery.isPending || slidesQuery.isPending,
+      isError: detailQuery.isError || slidesQuery.isError || !detailQuery.data,
+    },
+    access: {
+      canEditContent: detailQuery.data?.capabilities.editContent ?? false,
+      canManageAccess: detailQuery.data?.capabilities.manageAccess ?? false,
+    },
+    presentation: {
+      id: detailQuery.data?.id ?? id ?? "",
+      titleDraft,
+      onTitleChange: setTitleOverride,
+    },
+    preview: {
+      isVisible: isPreviewVisible,
+      ref: previewWrapperRef,
+      scale: previewScale,
+      onToggle: onTogglePreview,
+    },
+    slideList: {
+      slides,
+      selectedSlideIndex: safeSelectedSlideIndex,
+      draggingSlideId,
+      dragOverSlideId,
+      isGenerating: generateSlidesMutation.isPending,
+      onSelectSlide: setSelectedSlideIndex,
+      onDragStart: handleDragStart,
+      onDragEnd: handleDragEnd,
+      onDropSlide,
+      onDragOver: () => {},
+      onDragLeave: () => {},
+    },
+    contextPanel: {
+      activeContextId,
+      effectivePromptDraft,
+      pendingFiles,
+      contextFiles: contextFilesQuery.data,
+      isUpdating: updateContextMutation.isPending,
+      isGenerating: generateSlidesMutation.isPending,
+      numSlides,
+      onPromptChange: setPromptDraft,
+      onPickFiles,
+      onRemovePendingFile,
+      onMarkFileForDeletion,
+      onSaveContext,
+      onGenerateSlides,
+      onNumSlidesChange: setNumSlides,
+    },
+    toolbar: {
+      hasCurrentSlide: Boolean(currentSlide),
+      isDeleting: deleteSlideMutation.isPending,
+      isSaving: updateSlideMutation.isPending,
+      isSavedVisible,
+      onAddSlide,
+      onDeleteSlide,
+      onSave: onSaveSelectedSlide,
+    },
+    editor: {
+      markdownDraft,
+      hasSlides: slides.length > 0,
+      onMarkdownChange,
+    },
+    shareDialog: {
+      presentationId: detailQuery.data?.id ?? id ?? "",
+      open: isShareDialogOpen,
+      onOpen: onOpenShare,
+      onOpenChange: setIsShareDialogOpen,
+    },
   };
 }
