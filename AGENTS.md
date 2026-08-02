@@ -16,7 +16,6 @@ npm run build        # tsc -b && vite build
 npm run lint         # ESLint
 
 # Backend (port 3001, ESM, in backend/ directory)
-npm run dev          # tsx app.ts (predev starts observability services via Docker)
 npm run db:generate  # Drizzle migration generation
 npm run db:migrate   # Run pending migrations
 npm run db:studio    # Drizzle Studio

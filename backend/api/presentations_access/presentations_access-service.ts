@@ -12,6 +12,7 @@ import {
   presentationShareLinks,
 } from "../../database/drizzle/schema.js";
 import { conflict, notFound } from "../../errors/http-error.js";
+import { config } from "../../config/env.js";
 
 export type GrantPermission = "viewer" | "editor";
 
@@ -208,10 +209,7 @@ const createOrRotateShareLink = async (
     });
   }
 
-  const allowedOrigins = (process.env.ALLOWED_ORIGINS ?? "")
-    .split(",")
-    .map((origin) => origin.trim())
-    .filter(Boolean);
+  const allowedOrigins = config.allowedOrigins;
   const fallbackOrigin =
     allowedOrigins.find((origin) => {
       try {

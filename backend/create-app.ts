@@ -4,6 +4,7 @@ import cookieParser from "cookie-parser";
 import { apiRouter } from "./api/router.js";
 import { publicPresentationShareRouter } from "./api/presentations_access/router.js";
 import { httpLogger } from "./config/logger.js";
+import { config } from "./config/env.js";
 import { HttpError } from "./errors/http-error.js";
 import authMiddleware from "./middleware/auth.js";
 import { errorHandler, routeNotFound } from "./middleware/error-handler.js";
@@ -11,10 +12,7 @@ import authRouter from "./routes/auth.js";
 
 export function createApp() {
   const app = express();
-  const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
-    .split(",")
-    .map((origin) => origin.trim())
-    .filter(Boolean);
+  const allowedOrigins = config.allowedOrigins;
   const corsOptions: CorsOptions = {
     credentials: true,
     origin: (origin, callback) => {

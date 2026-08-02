@@ -1,20 +1,11 @@
-import dotenv from "dotenv";
-import process from "process";
 import { drizzle } from "drizzle-orm/mysql2";
 import { relations } from "./drizzle/schema.js";
 import { logger } from "../config/logger.js";
+import { config } from "../config/env.js";
 
-dotenv.config({ quiet: true });
+const { host, port, user, password, name } = config.db;
 
-const poolParams = {
-  port: process.env.DB_PORT,
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  name: process.env.DB_NAME,
-};
-
-const DATABASE_URL = `mysql://${poolParams.user}:${poolParams.password}@${poolParams.host}:${poolParams.port}/${poolParams.name}`;
+const DATABASE_URL = `mysql://${user}:${password}@${host}:${port}/${name}`;
 
 export const db = drizzle(DATABASE_URL, { relations });
 
