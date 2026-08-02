@@ -1,6 +1,6 @@
 // ─── Seed Dataset ────────────────────────────────────────────────────────────
 // All seed-owned data is identified by:
-//   • User emails starting with "seed-"
+//   • User emails listed in SEED_USERS
 //   • Presentation titles starting with SEED_PRESENTATION_TITLE_PREFIX
 // These two identifiers are what reset.ts uses to scope its deletes.
 
@@ -12,7 +12,7 @@ export type SeedUser = {
   /** Short label used in log output and as the reset key. */
   key: string;
   username: string;
-  /** Must start with "seed-" so reset.ts can locate them reliably. */
+  /** Used exactly as listed so reset.ts can locate the seeded account. */
   email: string;
   /** Plaintext — hashed at insert time inside mysql.ts. */
   password: string;
@@ -256,6 +256,8 @@ export type SeedAccessGrant = {
   /** Email of the user being granted access. */
   email: string;
   permission: "viewer" | "editor";
+  /** Relative to the seed run. Omit for a non-expiring grant. */
+  expiresInMinutes?: number;
 };
 
 export const SEED_ACCESS_GRANTS: SeedAccessGrant[] = [
@@ -268,5 +270,56 @@ export const SEED_ACCESS_GRANTS: SeedAccessGrant[] = [
     presentationKey: "product-design",
     email: "mohsen.khouaja@supcom.tn",
     permission: "editor",
+    expiresInMinutes: 24 * 60,
+  },
+  {
+    presentationKey: "intro-to-ai",
+    email: "mohsen.khouaja@supcom.tnn",
+    permission: "viewer",
+  },
+  {
+    presentationKey: "cloud-architecture",
+    email: "seed-carol@example.com",
+    permission: "editor",
+    expiresInMinutes: -24 * 60,
+  },
+];
+
+// ─── Share Links ──────────────────────────────────────────────────────────────────────────
+
+export type SeedShareLink = {
+  key: string;
+  /** Presentation key from SEED_PRESENTATIONS. */
+  presentationKey: string;
+  /** Plaintext development token. Only its SHA-256 hash is persisted. */
+  token: string;
+  /** Relative to the seed run. Omit for a non-expiring link. */
+  expiresInMinutes?: number;
+  revoked?: boolean;
+};
+
+export const SEED_SHARE_LINKS: SeedShareLink[] = [
+  {
+    key: "active",
+    presentationKey: "intro-to-ai",
+    token: "A".repeat(43),
+  },
+  {
+    key: "active-future-expiry",
+    presentationKey: "cloud-architecture",
+    token: "B".repeat(43),
+    expiresInMinutes: 24 * 60,
+  },
+  {
+    key: "expired",
+    presentationKey: "graphql-deep-dive",
+    token: "C".repeat(43),
+    expiresInMinutes: -24 * 60,
+  },
+  {
+    key: "revoked",
+    presentationKey: "css-grid-layouts",
+    token: "D".repeat(43),
+    revoked: true,
   },
 ];

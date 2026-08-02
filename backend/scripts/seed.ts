@@ -13,7 +13,24 @@ const printSummary = (result: Awaited<ReturnType<typeof runSeed>>): void => {
 
   console.log("\nPresentations:");
   for (const p of result.seededPresentations) {
-    console.log(`- ${p.id} (${p.key})`);
+    console.log(`- ${p.id} (${p.key}, owner: ${p.ownerEmail})`);
+  }
+
+  console.log("\nAccess grants:");
+  for (const grant of result.seededAccessGrants) {
+    const expiry = grant.expiresAt?.toISOString() ?? "never";
+    console.log(
+      `- ${grant.id} (${grant.presentationKey}, ${grant.email}, ${grant.permission}, expires: ${expiry})`,
+    );
+  }
+
+  console.log("\nShare links (development tokens; only hashes are stored):");
+  for (const link of result.seededShareLinks) {
+    const expiry = link.expiresAt?.toISOString() ?? "never";
+    const state = link.revokedAt ? "revoked" : "not revoked";
+    console.log(
+      `- ${link.key} (${link.presentationKey}, expires: ${expiry}, ${state}): ${link.token}`,
+    );
   }
   console.log("");
 };

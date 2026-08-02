@@ -10,13 +10,20 @@ import {
   contexts,
   files as filesTable,
   presentationAccessGrants,
+  presentationShareLinks,
   presentations,
   slides,
   users,
 } from "../../database/drizzle/schema.js";
 import { UPLOAD_PATH } from "../../config/uploads.js";
+import { hashShareToken } from "../../authorization/presentation-authorization.js";
 
-import { SEED_ACCESS_GRANTS, SEED_PRESENTATIONS, SEED_USERS } from "./dataset.js";
+import {
+  SEED_ACCESS_GRANTS,
+  SEED_PRESENTATIONS,
+  SEED_SHARE_LINKS,
+  SEED_USERS,
+} from "./dataset.js";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -31,11 +38,30 @@ type SeededPresentation = {
   id: UUID;
   /** Short stable key from the dataset, used in log output. */
   key: string;
+  ownerEmail: string;
+};
+
+type SeededAccessGrant = {
+  id: UUID;
+  presentationKey: string;
+  email: string;
+  permission: "viewer" | "editor";
+  expiresAt: Date | null;
+};
+
+type SeededShareLink = {
+  key: string;
+  presentationKey: string;
+  token: string;
+  expiresAt: Date | null;
+  revokedAt: Date | null;
 };
 
 export type SeedResult = {
   seededUsers: SeededUser[];
   seededPresentations: SeededPresentation[];
+  seededAccessGrants: SeededAccessGrant[];
+  seededShareLinks: SeededShareLink[];
 };
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -51,6 +77,8 @@ const hashPassword = async (password: string): Promise<string> => {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export const runSeed = async (): Promise<SeedResult> => {
+  const seededAt = new Date();
+
   // ── 1. Insert users ──────────────────────────────────────────────────────
 
   const seededUsers: SeededUser[] = [];
@@ -96,7 +124,11 @@ export const runSeed = async (): Promise<SeedResult> => {
       userId: owner.id,
     });
 
-    seededPresentations.push({ id: presentationId, key: seedPresentation.key });
+    seededPresentations.push({
+      id: presentationId,
+      key: seedPresentation.key,
+      ownerEmail: owner.email,
+    });
 
     // ── 2b. Context row (one per presentation, unique constraint) ────────
 
@@ -151,6 +183,8 @@ export const runSeed = async (): Promise<SeedResult> => {
 
   // ── 3. Insert access grants (shared presentations) ───────────────────────
 
+  const seededAccessGrants: SeededAccessGrant[] = [];
+
   for (const seedAccess of SEED_ACCESS_GRANTS) {
     const presEntry = seededPresentations.find(
       (p) => p.key === seedAccess.presentationKey,
@@ -172,13 +206,75 @@ export const runSeed = async (): Promise<SeedResult> => {
       );
     }
 
+    const grantId = randomUUID() as UUID;
+    const expiresAt =
+      seedAccess.expiresInMinutes === undefined
+        ? null
+        : new Date(
+            seededAt.getTime() + seedAccess.expiresInMinutes * 60 * 1000,
+          );
+
     await db.insert(presentationAccessGrants).values({
-      id: randomUUID() as UUID,
+      id: grantId,
       userId: targetUser.id,
       presentationId: presEntry.id,
       permission: seedAccess.permission,
+      expiresAt,
+    });
+
+    seededAccessGrants.push({
+      id: grantId,
+      presentationKey: seedAccess.presentationKey,
+      email: seedAccess.email,
+      permission: seedAccess.permission,
+      expiresAt,
     });
   }
 
-  return { seededUsers, seededPresentations };
+  // ── 4. Insert share links ─────────────────────────────────────────────────────────
+
+  const seededShareLinks: SeededShareLink[] = [];
+
+  for (const seedShareLink of SEED_SHARE_LINKS) {
+    const presEntry = seededPresentations.find(
+      (p) => p.key === seedShareLink.presentationKey,
+    );
+
+    if (!presEntry) {
+      throw new Error(
+        `Seed dataset error: presentation key "${seedShareLink.presentationKey}" not found for share link "${seedShareLink.key}".`,
+      );
+    }
+
+    const expiresAt =
+      seedShareLink.expiresInMinutes === undefined
+        ? null
+        : new Date(
+            seededAt.getTime() + seedShareLink.expiresInMinutes * 60 * 1000,
+          );
+    const revokedAt = seedShareLink.revoked ? seededAt : null;
+
+    await db.insert(presentationShareLinks).values({
+      id: randomUUID() as UUID,
+      presentationId: presEntry.id,
+      tokenHash: hashShareToken(seedShareLink.token),
+      expiresAt,
+      revokedAt,
+    });
+
+    seededShareLinks.push({
+      key: seedShareLink.key,
+      presentationKey: seedShareLink.presentationKey,
+      token: seedShareLink.token,
+      expiresAt,
+      revokedAt,
+    });
+  }
+
+  return {
+    seededUsers,
+    seededPresentations,
+    seededAccessGrants,
+    seededShareLinks,
+  };
 };
