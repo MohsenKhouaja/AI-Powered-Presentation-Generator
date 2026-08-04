@@ -7,9 +7,9 @@ const REQUIRED_ENV_VARS = [
   "JWT_REFRESH_TOKEN_SECRET_KEY",
   "DB_HOST",
   "DB_PORT",
-  "DB_USER",
-  "DB_PASSWORD",
-  "DB_NAME",
+  "MYSQL_USER",
+  "MYSQL_PASSWORD",
+  "MYSQL_DATABASE",
   "ALLOWED_ORIGINS",
   "PORT",
 ] as const;
@@ -46,9 +46,9 @@ export const config = {
   db: {
     host: readRequired("DB_HOST"),
     port: readPort("DB_PORT"),
-    user: readRequired("DB_USER"),
-    password: readRequired("DB_PASSWORD"),
-    name: readRequired("DB_NAME"),
+    user: readRequired("MYSQL_USER"),
+    password: readRequired("MYSQL_PASSWORD"),
+    name: readRequired("MYSQL_DATABASE"),
   },
   allowedOrigins: readRequired("ALLOWED_ORIGINS")
     .split(",")

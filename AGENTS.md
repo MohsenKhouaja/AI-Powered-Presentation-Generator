@@ -28,7 +28,7 @@ Root scripts: `docker:up`, `docker:down`, `docker:logs`, `docker:rebuild`.
 
 ## Setup
 
-- **`.env`** in `backend/` needs: `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `JWT_ACCESS_TOKEN_SECRET_KEY`, `JWT_REFRESH_TOKEN_SECRET_KEY`, `ALLOWED_ORIGINS` (comma-separated)
+- **`.env`** in `backend/` needs: `DB_HOST`, `DB_PORT`, `MYSQL_ROOT_PASSWORD`, `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD`, `JWT_ACCESS_TOKEN_SECRET_KEY`, `JWT_REFRESH_TOKEN_SECRET_KEY`, `ALLOWED_ORIGINS` (comma-separated)
 - Docker Compose provides local **Loki** (port 3100) and local **Grafana**
   (port 3002). MySQL must run separately.
 - Upload dir (`uploads/`) auto-created by `app.ts:25` — no manual step.

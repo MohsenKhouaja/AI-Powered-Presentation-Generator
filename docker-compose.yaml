@@ -1,4 +1,28 @@
 services:
+  loki-ready:
+    image: curlimages/curl:8.21.0
+    depends_on:
+      - loki
+    entrypoint: [ "/bin/sh", "-c" ]
+    command:
+      - |
+        until curl -fsS http://loki:3100/ready; do
+          echo "Waiting for Loki..."
+          sleep 2
+        done
+        echo "Loki is ready"
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
   loki:
     image: grafana/loki:3.7.0
     command: -config.file=/etc/loki/loki-config.yaml
@@ -22,6 +46,23 @@ services:
     volumes:
       - grafana_data:/var/lib/grafana
       - ./observability/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+  backend:
+    image: p2m_backend
+    depends_on:
+      loki-ready:
+        condition: service_completed_successfully
+      mysql : 
+        condition : service_started
+    build:
+      context: .
+      dockerfile: backend/Dockerfile.dev
+    ports:
+      - "127.0.0.1:3001:3000"
+    volumes:
+      - ./backend:/app/backend
+    env_file:
+      - .env
 volumes:
   loki_data:
   grafana_data:
+  mysql_data:

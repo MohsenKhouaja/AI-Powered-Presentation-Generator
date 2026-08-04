@@ -4,14 +4,12 @@
     "backend",
     "frontend"
   ],
-  "devDependencies": {
-    "husky": "^9.1.7"
-  },
   "scripts": {
-    "prepare": "husky",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f",
-    "docker:rebuild": "docker compose up -d --build"
+    "docker:rebuild": "docker compose up -d --build",
+    "dev:api": "npm run dev --workspace=backend",
+    "dev:client": "npm run dev --workspace=frontend"
   }
 }
