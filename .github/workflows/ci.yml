@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: Frontend (lint + build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint --workspace=frontend
+
+      - name: Build
+        run: npm run build --workspace=frontend
+
+  backend:
+    name: Backend (build + test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build
+        run: npm run build --workspace=backend
+
+      - name: Test
+        run: npm run test --workspace=backend
+        env:
+          JWT_ACCESS_TOKEN_SECRET_KEY: ci-access-secret
+          JWT_REFRESH_TOKEN_SECRET_KEY: ci-refresh-secret
+          DB_HOST: localhost
+          DB_PORT: "3306"
+          MYSQL_USER: ci-user
+          MYSQL_PASSWORD: ci-password
+          MYSQL_DATABASE: p2m
+          ALLOWED_ORIGINS: http://localhost:3000
+          PORT: "3001"
