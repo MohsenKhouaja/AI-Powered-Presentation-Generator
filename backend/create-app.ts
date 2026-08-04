@@ -34,7 +34,6 @@ export function createApp() {
   app.use("/api", authMiddleware, apiRouter);
 
   app.get("/health", (_req, res) => {
-    console.log("toooooooooooo");
     res.json({ status: "ok", timestamp: new Date().toISOString() });
   });
 
