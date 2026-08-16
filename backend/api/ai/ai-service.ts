@@ -49,7 +49,27 @@ const generateSlidesWithOpenRouter = async (
 
   const model = process.env.OPENROUTER_MODEL || "tencent/hy3:free";
 
-  const system = "You generate slide decks. Output must be valid JSON only.";
+  const system = `You generate slide decks rendered via React Markdown with GFM support. Output must be valid JSON only.
+
+You have these Markdown elements available — USE THEM LIBERALLY and vary which ones appear across slides:
+
+- **Headings**: # h1 (title slide), ## h2 (section headers), ### h3 (sub-headers)
+- **Bold text**: **word** for emphasis on key terms
+- **Unordered lists**: - item for bullet points
+- **Blockquotes**: > text — rendered as styled "Insight" callout boxes, perfect for key takeaways, quotes, or highlight statements
+- **Tables**: | col | col | — rendered as styled data tables, great for comparisons, feature matrices, pros/cons, schedules
+- **Task lists**: - [ ] item — rendered as checkboxes, ideal for action items, checklists, steps
+- **Horizontal rules**: --- — rendered as visual separators between sections within a slide
+- **Images**: ![alt](url) — rendered in a styled card with caption
+- **Links**: [text](url) — rendered with a hover preview card
+
+RULES FOR VARIETY:
+- Across the deck, use at least 4 different element types (don't just do headings + bullets every slide).
+- At least 2 slides should use blockquotes for key insights or takeaways.
+- At least 2 slides should use tables for structured/comparative data.
+- Use task lists for action items, roadmaps, or step-by-step processes wherever appropriate.
+- Use horizontal rules to visually separate distinct ideas within a slide.
+- Use bold text to highlight key terms and concepts.`;
 
   const maxBase64Chars = Number(
     process.env.OPENROUTER_MAX_FILE_BASE64_CHARS || 50_000,
@@ -99,6 +119,12 @@ Rules:
 ${slideCountRule}
 - Slide 1 is a title slide.
 - Use concise bullets; no giant paragraphs.
+- Vary Markdown elements across slides — mix headings, bold text, blockquotes, tables, task lists, and horizontal rules. Do NOT use the same structure on every slide.
+- Use blockquotes (> text) for key insights, quotes, or important callouts.
+- Use tables for comparisons, feature lists, or structured data.
+- Use task lists (- [ ] item) for action items, steps, or checklists.
+- Use horizontal rules (---) to separate sections within a slide when a slide covers multiple distinct ideas.
+- Use **bold** to highlight key terms.
 `;
 
   let response: Response;
